@@ -1,83 +1,81 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const scoreElement = document.getElementById('score');
+const scoreVal = document.getElementById('scoreVal');
+const menu = document.getElementById('menu');
+const startBtn = document.getElementById('startBtn');
+const boostBtn = document.getElementById('boost-btn');
 
-// Ekran Boyutu Ayarı
-function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-}
-window.addEventListener('resize', resize);
-resize();
-
-// Oyun Değişkenleri
+let gameRunning = false;
 let score = 0;
 let foods = [];
+let isBoosting = false;
+
 let snake = {
-    x: canvas.width / 2,
-    y: canvas.height / 2,
+    x: 0, y: 0,
     radius: 12,
     segments: [],
-    length: 5,
+    length: 8,
     angle: 0,
-    speed: 3,
-    color: '#A020F0' // Purpleguy Moru
+    speed: 3.5,
+    color: '#A020F0'
 };
 
-// Dokunmatik Kontrol (Tablet Uyumluluğu)
+function init() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    snake.x = canvas.width / 2;
+    snake.y = canvas.height / 2;
+}
+
+// Kontroller
 window.addEventListener('touchmove', (e) => {
-    e.preventDefault();
+    if(!gameRunning) return;
     const touch = e.touches[0];
     const dx = touch.clientX - snake.x;
     const dy = touch.clientY - snake.y;
     snake.angle = Math.atan2(dy, dx);
 }, { passive: false });
 
-// Fare Kontrolü (Bilgisayarda test için)
-window.addEventListener('mousemove', (e) => {
-    const dx = e.clientX - snake.x;
-    const dy = e.clientY - snake.y;
-    snake.angle = Math.atan2(dy, dx);
-});
+boostBtn.addEventListener('touchstart', (e) => { e.preventDefault(); isBoosting = true; });
+boostBtn.addEventListener('touchend', () => { isBoosting = false; });
 
-// Yemek Oluşturma
 function createFood() {
-    if (foods.length < 30) {
+    if (foods.length < 40) {
         foods.push({
             x: Math.random() * canvas.width,
             y: Math.random() * canvas.height,
-            radius: 6,
+            radius: 5,
             color: `hsl(${Math.random() * 360}, 100%, 50%)`
         });
     }
 }
 
-// Çarpışma ve Güncelleme
 function update() {
-    // Kafayı ilerlet
-    snake.x += Math.cos(snake.angle) * snake.speed;
-    snake.y += Math.sin(snake.angle) * snake.speed;
+    if(!gameRunning) return;
 
-    // Vücut takibi (Akıcı hareket)
+    let currentSpeed = isBoosting ? snake.speed * 1.8 : snake.speed;
+    
+    snake.x += Math.cos(snake.angle) * currentSpeed;
+    snake.y += Math.sin(snake.angle) * currentSpeed;
+
+    // Vücut Takibi
     snake.segments.unshift({x: snake.x, y: snake.y});
-    if (snake.segments.length > snake.length * 5) {
+    if (snake.segments.length > snake.length * 4) {
         snake.segments.pop();
     }
 
-    // Yemek yeme kontrolü
-    foods.forEach((food, index) => {
-        const dx = snake.x - food.x;
-        const dy = snake.y - food.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
+    // Yemek Yeme
+    foods.forEach((food, i) => {
+        const dist = Math.hypot(snake.x - food.x, snake.y - food.y);
         if (dist < snake.radius + food.radius) {
-            foods.splice(index, 1);
+            foods.splice(i, 1);
             snake.length += 1;
             score += 10;
-            scoreElement.innerText = "Skor: " + score;
+            scoreVal.innerText = score;
         }
     });
 
-    // Kenarlardan geçiş (Tablet için kolaylık)
+    // Kenar Kontrolü
     if (snake.x > canvas.width) snake.x = 0;
     if (snake.x < 0) snake.x = canvas.width;
     if (snake.y > canvas.height) snake.y = 0;
@@ -86,31 +84,30 @@ function update() {
     createFood();
 }
 
-// Çizim
 function draw() {
-    ctx.fillStyle = 'black'; // Efe'nin siyah arka planı
+    ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Yemekleri çiz
-    foods.forEach(food => {
-        ctx.fillStyle = food.color;
+    // Yemekler
+    foods.forEach(f => {
+        ctx.fillStyle = f.color;
         ctx.beginPath();
-        ctx.arc(food.x, food.y, food.radius, 0, Math.PI * 2);
+        ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2);
         ctx.fill();
     });
 
-    // Yılanı çiz
-    snake.segments.forEach((seg, index) => {
-        if (index % 5 === 0) {
+    // Yılan
+    snake.segments.forEach((seg, i) => {
+        if (i % 4 === 0) {
             ctx.fillStyle = snake.color;
             ctx.beginPath();
             ctx.arc(seg.x, seg.y, snake.radius, 0, Math.PI * 2);
             ctx.fill();
-            // Göz ekleyelim (Sadece kafaya)
-            if (index === 0) {
+            
+            if(i === 0) { // Kafa/Göz
                 ctx.fillStyle = "white";
                 ctx.beginPath();
-                ctx.arc(seg.x, seg.y, 4, 0, Math.PI * 2);
+                ctx.arc(seg.x, seg.y, 5, 0, Math.PI * 2);
                 ctx.fill();
             }
         }
@@ -123,5 +120,10 @@ function loop() {
     requestAnimationFrame(loop);
 }
 
-loop();
+startBtn.onclick = () => {
+    menu.style.display = 'none';
+    gameRunning = true;
+};
 
+init();
+loop();
