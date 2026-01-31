@@ -11,38 +11,34 @@ let foods = [];
 let isBoosting = false;
 let playerName = "Guest";
 
-let snake = { x: 0, y: 0, radius: 14, segments: [], length: 12, angle: 0, speed: 3.5, color: '#A020F0' };
-
-// ULTRA ZEKİ BOTLAR
+let snake = { x: 0, y: 0, radius: 14, segments: [], length: 15, angle: 0, speed: 3.5, color: '#A020F0' };
 let bots = [];
 
 function init() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-    
     snake.x = canvas.width / 2;
     snake.y = canvas.height / 2;
     snake.segments = [];
-    snake.length = 12;
+    snake.length = 15;
     score = 0;
     foods = [];
 
-    // Botları Farklı Bölgelerde Başlat
     bots = [
-        { name: "Alpha_Predator", x: 100, y: 100, score: 600, color: '#FF0000', angle: 0, segments: [], length: 15 },
-        { name: "Shadow_Snake", x: canvas.width - 100, y: 100, score: 400, color: '#00FF00', angle: 0, segments: [], length: 12 },
-        { name: "Neon_Hunter", x: 100, y: canvas.height - 100, score: 250, color: '#00CCFF', angle: 0, segments: [], length: 10 }
+        { id: 1, name: "Alpha_Predator", x: 100, y: 100, score: 800, color: '#FF0000', angle: 0, segments: [], length: 25 },
+        { id: 2, name: "Shadow_Snake", x: canvas.width - 100, y: 100, score: 500, color: '#00FF00', angle: 0, segments: [], length: 20 },
+        { id: 3, name: "Neon_Hunter", x: 100, y: canvas.height - 100, score: 300, color: '#00CCFF', angle: 0, segments: [], length: 15 }
     ];
 
-    for(let i=0; i<80; i++) spawnFood();
+    for(let i=0; i<100; i++) spawnFood();
 }
 
-function spawnFood() {
+function spawnFood(x, y, radius, color) {
     foods.push({ 
-        x: Math.random() * canvas.width, 
-        y: Math.random() * canvas.height, 
-        radius: Math.random() * 3 + 4, 
-        color: `hsl(${Math.random()*360}, 100%, 50%)` 
+        x: x || Math.random() * canvas.width, 
+        y: y || Math.random() * canvas.height, 
+        radius: radius || Math.random() * 3 + 4, 
+        color: color || `hsl(${Math.random()*360}, 100%, 50%)` 
     });
 }
 
@@ -81,6 +77,45 @@ function update() {
     // DUVAR KONTROLÜ
     if(snake.x < 0 || snake.x > canvas.width || snake.y < 0 || snake.y > canvas.height) gameOver();
 
+    // HITBOX SİSTEMİ (Çarpışmalar)
+    bots.forEach((bot, bIndex) => {
+        // Sen bota çarparsan
+        bot.segments.forEach((seg, sIdx) => {
+            if (sIdx > 5 && Math.hypot(snake.x - seg.x, snake.y - seg.y) < snake.radius + 5) {
+                gameOver();
+            }
+        });
+
+        // Bot sana veya başka bota çarparsa
+        let botDied = false;
+        
+        // Botun sana çarpması
+        snake.segments.forEach(seg => {
+            if (Math.hypot(bot.x - seg.x, bot.y - seg.y) < 15) botDied = true;
+        });
+
+        // Botun diğer botlara çarpması
+        bots.forEach(otherBot => {
+            if(bot.id !== otherBot.id) {
+                otherBot.segments.forEach(seg => {
+                    if (Math.hypot(bot.x - seg.x, bot.y - seg.y) < 15) botDied = true;
+                });
+            }
+        });
+
+        if (botDied) {
+            // Bot ölünce ganimet bırakır
+            bot.segments.forEach((seg, idx) => {
+                if(idx % 5 === 0) spawnFood(seg.x, seg.y, 8, bot.color);
+            });
+            // Botu yeniden doğdur
+            bot.x = Math.random() * canvas.width;
+            bot.y = Math.random() * canvas.height;
+            bot.segments = [];
+            bot.length = 15;
+        }
+    });
+
     // YEMEK TOPLAMA
     foods.forEach((f, i) => {
         if(Math.hypot(snake.x - f.x, snake.y - f.y) < snake.radius + f.radius) {
@@ -91,20 +126,16 @@ function update() {
         }
     });
 
-    // --- %100 ZEKA BOT MANTIĞI ---
+    // BOT AI GÜNCELLEME
     bots.forEach(b => {
-        // En yakın yemeği bulma (AI)
         let closestFood = foods[0];
         let minDist = Math.hypot(b.x - foods[0].x, b.y - foods[0].y);
-        
         foods.forEach(f => {
             let d = Math.hypot(b.x - f.x, b.y - f.y);
             if(d < minDist) { minDist = d; closestFood = f; }
         });
 
-        // Yemeğe doğru yönelme
         let targetAngle = Math.atan2(closestFood.y - b.y, closestFood.x - b.x);
-        // Yumuşak dönüş
         let diff = targetAngle - b.angle;
         while (diff < -Math.PI) diff += Math.PI * 2;
         while (diff > Math.PI) diff -= Math.PI * 2;
@@ -113,16 +144,10 @@ function update() {
         b.x += Math.cos(b.angle) * 2.8;
         b.y += Math.sin(b.angle) * 2.8;
 
-        // Bot vücut takibi
-        if(!b.segments) b.segments = [];
         b.segments.unshift({x: b.x, y: b.y});
         if(b.segments.length > b.length * 3) b.segments.pop();
 
-        // Bot yemek yerse büyüme
-        if(minDist < 20) {
-            b.length += 0.5;
-            b.score += 5;
-        }
+        if(minDist < 20) { b.length += 0.5; b.score += 5; }
     });
 
     updateLeaderboard();
@@ -146,38 +171,29 @@ function draw() {
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Yemekler
     foods.forEach(f => {
         ctx.fillStyle = f.color;
         ctx.beginPath(); ctx.arc(f.x, f.y, f.radius, 0, Math.PI*2); ctx.fill();
     });
 
-    // Botları Çiz (Vücutlarıyla birlikte)
     bots.forEach(b => {
         b.segments.forEach((seg, i) => {
             if(i % 3 === 0) {
                 ctx.fillStyle = b.color;
-                ctx.globalAlpha = 1 - (i / b.segments.length); // Kuyruğa doğru şeffaflaşma
                 ctx.beginPath(); ctx.arc(seg.x, seg.y, 12, 0, Math.PI*2); ctx.fill();
-                ctx.globalAlpha = 1;
             }
         });
         ctx.fillStyle = "white";
-        ctx.font = "bold 12px Arial";
         ctx.fillText(b.name, b.x - 20, b.y - 20);
     });
 
-    // Oyuncuyu Çiz
     snake.segments.forEach((seg, i) => {
         if(i % 3 === 0) {
             ctx.fillStyle = snake.color;
             ctx.beginPath(); ctx.arc(seg.x, seg.y, snake.radius, 0, Math.PI*2); ctx.fill();
-            if(i === 0) { // Gözler
+            if(i === 0) {
                 ctx.fillStyle = "white";
-                ctx.beginPath(); 
-                ctx.arc(seg.x+6, seg.y-6, 5, 0, Math.PI*2); 
-                ctx.arc(seg.x+6, seg.y+6, 5, 0, Math.PI*2); 
-                ctx.fill();
+                ctx.beginPath(); ctx.arc(seg.x+6, seg.y-6, 5, 0, Math.PI*2); ctx.arc(seg.x+6, seg.y+6, 5, 0, Math.PI*2); ctx.fill();
             }
         }
     });
