@@ -5,54 +5,47 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Snake.io Remastered</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: black; color: white; font-family: 'Segoe UI', sans-serif; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: black; color: white; font-family: sans-serif; }
         canvas { display: block; }
         
-        /* Ana Menü */
-        #menu { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
-        #menu h1 { color: #A020F0; font-size: 60px; text-shadow: 0 0 20px #A020F0; margin: 0; }
-        #menu input { padding: 15px; border-radius: 30px; border: 2px solid #A020F0; background: #111; color: white; text-align: center; margin: 20px; width: 250px; }
+        /* Ekran Katmanları */
+        .overlay { position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; background: rgba(0,0,0,0.9); }
         
-        .skin-select { display: flex; gap: 15px; margin-bottom: 30px; }
-        .skin { width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; }
-        .skin.active { border-color: white; transform: scale(1.2); box-shadow: 0 0 15px white; }
+        /* Menü ve Butonlar */
+        h1 { color: #A020F0; font-size: 50px; text-shadow: 0 0 15px #A020F0; margin-bottom: 20px; }
+        input { padding: 12px; border-radius: 25px; border: 2px solid #A020F0; background: #111; color: white; text-align: center; margin-bottom: 20px; width: 220px; }
+        button { padding: 15px 40px; border-radius: 30px; border: none; background: #A020F0; color: white; font-weight: bold; cursor: pointer; font-size: 18px; transition: 0.3s; }
+        button:hover { transform: scale(1.1); box-shadow: 0 0 20px #A020F0; }
 
-        #startBtn { padding: 15px 60px; border-radius: 30px; border: none; background: #A020F0; color: white; font-weight: bold; cursor: pointer; font-size: 20px; }
-
-        /* Leaderboard */
-        #leaderboard { position: absolute; top: 20px; right: 20px; background: rgba(0, 0, 0, 0.6); padding: 15px; border-radius: 10px; border: 1px solid rgba(160, 32, 240, 0.3); min-width: 160px; z-index: 5; }
-        #leaderboard h3 { margin: 0 0 10px 0; color: #A020F0; font-size: 14px; text-align: center; text-transform: uppercase; }
-        .lb-item { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-
-        /* Mini Map */
-        #minimap { position: absolute; bottom: 20px; right: 20px; width: 150px; height: 150px; background: rgba(0,0,0,0.7); border: 2px solid #333; border-radius: 10px; z-index: 5; }
-
-        #ui { position: absolute; top: 20px; left: 20px; font-size: 24px; font-weight: bold; z-index: 5; }
-        #joystick-wrapper { position: absolute; bottom: 40px; left: 40px; width: 130px; height: 130px; background: rgba(255, 255, 255, 0.05); border: 2px solid rgba(160, 32, 240, 0.4); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 10; touch-action: none; }
-        #joystick-stick { width: 55px; height: 55px; background: rgba(160, 32, 240, 0.7); border-radius: 50%; }
-        #boost-btn { position: absolute; bottom: 60px; right: 200px; width: 85px; height: 85px; background: rgba(160, 32, 240, 0.3); border: 3px solid #A020F0; border-radius: 50%; color: white; font-weight: bold; display: flex; align-items: center; justify-content: center; z-index: 10; touch-action: none; }
+        /* Oyun İçi Arayüz */
+        #ui { position: absolute; top: 20px; left: 20px; font-size: 24px; font-weight: bold; z-index: 5; pointer-events: none; }
+        #leaderboard { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.6); padding: 10px; border-radius: 10px; border: 1px solid #A020F0; min-width: 140px; z-index: 5; }
+        .lb-item { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 3px; }
+        
+        #minimap { position: absolute; bottom: 20px; right: 20px; width: 120px; height: 120px; background: rgba(0,0,0,0.7); border: 2px solid #333; border-radius: 10px; z-index: 5; }
+        #joystick-wrapper { position: absolute; bottom: 30px; left: 30px; width: 120px; height: 120px; background: rgba(255,255,255,0.05); border: 2px solid rgba(160,32,240,0.4); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 10; touch-action: none; }
+        #joystick-stick { width: 50px; height: 50px; background: rgba(160,32,240,0.7); border-radius: 50%; }
+        #boost-btn { position: absolute; bottom: 40px; right: 160px; width: 80px; height: 80px; background: rgba(160,32,240,0.3); border: 3px solid #A020F0; border-radius: 50%; color: white; font-weight: bold; display: flex; align-items: center; justify-content: center; z-index: 10; touch-action: none; }
     </style>
 </head>
 <body>
-    <div id="menu">
+
+    <div id="menu" class="overlay">
         <h1>Snake.io</h1>
         <input type="text" id="pName" placeholder="Adını Yaz (Guest)..." maxlength="12">
-        <div class="skin-select">
-            <div class="skin active" style="background: #A020F0;" onclick="setSkin('#A020F0', this)"></div>
-            <div class="skin" style="background: #00FF00;" onclick="setSkin('#00FF00', this)"></div>
-            <div class="skin" style="background: #FF0000;" onclick="setSkin('#FF0000', this)"></div>
-        </div>
         <button id="startBtn">OYUNA BAŞLA</button>
-        <p style="margin-top:20px; opacity:0.3; font-size: 12px;">Purpleguy © 2026 - tablet power</p>
+        <p style="margin-top:20px; opacity:0.3; font-size:12px;">Purpleguy © 2026 - tablet power</p>
+    </div>
+
+    <div id="gameOverScreen" class="overlay" style="display: none; background: rgba(0,0,0,0.85); z-index: 110;">
+        <h1 style="color: #ff0000;">ÖLDÜN! 💀</h1>
+        <p style="font-size: 24px;">Skorun: <span id="finalScore" style="color:#A020F0;">0</span></p>
+        <button id="restartBtn">YENİDEN DENE</button>
+        <button id="toMenuBtn" style="background:transparent; border:2px solid #555; margin-top:10px; font-size:14px;">ANA MENÜ</button>
     </div>
 
     <div id="ui">Skor: <span id="scoreVal">0</span></div>
-    
-    <div id="leaderboard">
-        <h3>LİDERLİK</h3>
-        <div id="lb-content"></div>
-    </div>
-
+    <div id="leaderboard"><div id="lb-content"></div></div>
     <canvas id="minimap"></canvas>
     <div id="joystick-wrapper"><div id="joystick-stick"></div></div>
     <div id="boost-btn">BOOST</div>
