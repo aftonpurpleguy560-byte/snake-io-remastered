@@ -4,42 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Snake.io Remastered</title>
-    <link rel="manifest" href="manifest.json">
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: black; color: white; font-family: 'Segoe UI', sans-serif; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: black; color: white; font-family: sans-serif; }
         canvas { display: block; }
-        
-        /* Menü Tasarımı */
         #menu { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
         #menu h1 { color: #A020F0; font-size: 50px; text-shadow: 0 0 10px #A020F0; }
         #menu input { padding: 12px; border-radius: 25px; border: 2px solid #A020F0; background: #111; color: white; text-align: center; margin-bottom: 15px; width: 220px; }
-        #menu button { padding: 15px 50px; border-radius: 25px; border: none; background: #A020F0; color: white; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        #menu button:hover { transform: scale(1.1); box-shadow: 0 0 20px #A020F0; }
-
-        /* Oyun İçi Arayüz */
-        #ui { position: absolute; top: 15px; left: 15px; pointer-events: none; font-size: 20px; font-weight: bold; }
-        #boost-btn { position: absolute; bottom: 50px; right: 50px; width: 90px; height: 90px; background: rgba(160, 32, 240, 0.4); border: 3px solid #A020F0; border-radius: 50%; color: white; font-weight: bold; display: flex; align-items: center; justify-content: center; user-select: none; touch-action: none; z-index: 10; }
-        #joystick-area { position: absolute; bottom: 50px; left: 50px; width: 120px; height: 120px; border: 2px dashed rgba(255,255,255,0.2); border-radius: 50%; pointer-events: none; }
+        #menu button { padding: 15px 50px; border-radius: 25px; border: none; background: #A020F0; color: white; font-weight: bold; cursor: pointer; }
+        #ui { position: absolute; top: 15px; left: 15px; pointer-events: none; font-size: 20px; }
+        #boost-btn { position: absolute; bottom: 50px; right: 50px; width: 80px; height: 80px; background: rgba(160, 32, 240, 0.4); border: 2px solid #A020F0; border-radius: 50%; color: white; font-weight: bold; display: flex; align-items: center; justify-content: center; user-select: none; touch-action: none; }
     </style>
 </head>
 <body>
-
     <div id="menu">
         <h1>Snake.io</h1>
-        <input type="text" id="pName" placeholder="Adını Yaz Efe..." maxlength="12">
+        <input type="text" id="pName" placeholder="Oyuncu Adı (Guest)..." maxlength="12">
         <button id="startBtn">OYUNA BAŞLA</button>
         <p style="margin-top:20px; opacity:0.5;">Purpleguy © 2026 - tablet power</p>
     </div>
 
     <div id="ui">Skor: <span id="scoreVal">0</span></div>
-    <div id="joystick-area"></div>
     <div id="boost-btn">BOOST</div>
-
     <canvas id="gameCanvas"></canvas>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getDatabase, ref, set, onValue, onDisconnect } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAzCQVXlHw6IFNQdb30d7sh2uPAppEvYvU",
@@ -47,12 +37,12 @@
             projectId: "snake-io-remastered",
             storageBucket: "snake-io-remastered.firebasestorage.app",
             messagingSenderId: "504524643330",
-            appId: "1:504524643330:web:2a51e0dd9791b54bf49b1b"
+            appId: "1:504524643330:web:2a51e0dd9791b54bf49b1b",
+            databaseURL: "https://snake-io-remastered-default-rtdb.firebaseio.com"
         };
-
         const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        window.db = db; window.dbMethods = { collection, addDoc };
+        window.rdb = getDatabase(app);
+        window.rdbMethods = { ref, set, onValue, onDisconnect };
     </script>
     <script src="game.js"></script>
 </body>
