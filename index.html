@@ -6,22 +6,38 @@
     <title>Snake.io Remastered</title>
     <link rel="manifest" href="manifest.json">
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: black; /* Senin favori rengin */
-        }
-        canvas {
-            display: block;
-        }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: black; color: white; font-family: sans-serif; }
+        canvas { display: block; }
+        #ui { position: absolute; top: 10px; left: 10px; pointer-events: none; }
+        #score { font-size: 24px; font-weight: bold; }
     </style>
 </head>
 <body>
+    <div id="ui">
+        <div id="score">Skor: 0</div>
+    </div>
     <canvas id="gameCanvas"></canvas>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAzCQVXlHw6IFNQdb30d7sh2uPAppEvYvU",
+            authDomain: "snake-io-remastered.firebaseapp.com",
+            projectId: "snake-io-remastered",
+            storageBucket: "snake-io-remastered.firebasestorage.app",
+            messagingSenderId: "504524643330",
+            appId: "1:504524643330:web:2a51e0dd9791b54bf49b1b"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.db = db;
+        window.dbMethods = { collection, addDoc, query, orderBy, limit, getDocs };
+        console.log("Firebase Efe için hazır!");
+    </script>
     <script src="game.js"></script>
 </body>
 </html>
-
