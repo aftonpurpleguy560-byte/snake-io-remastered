@@ -2,8 +2,8 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const mCanvas = document.getElementById('minimap');
 const mCtx = mCanvas.getContext('2d');
-const lbContent = document.getElementById('lb-content');
 const menu = document.getElementById('menu');
+const goScreen = document.getElementById('gameOverScreen');
 
 let gameRunning = false;
 let score = 0;
@@ -11,30 +11,39 @@ let foods = [];
 let isBoosting = false;
 let playerName = "Guest";
 
-let snake = { x: 0, y: 0, radius: 14, segments: [], length: 12, angle: 0, speed: 3.2, color: '#A020F0' };
+let snake = { x: 0, y: 0, radius: 14, segments: [], length: 12, angle: 0, speed: 3.5, color: '#A020F0' };
 
-// BOTLAR VE İSİMLERİ
-let bots = [
-    { name: "Pro_Slayer", x: 200, y: 300, score: 500, color: 'red', angle: Math.random() * 6 },
-    { name: "Snake_Master", x: 800, y: 150, score: 350, color: 'orange', angle: Math.random() * 6 },
-    { name: "Ghost_Killer", x: 400, y: 700, score: 200, color: 'blue', angle: Math.random() * 6 }
-];
+// ULTRA ZEKİ BOTLAR
+let bots = [];
 
 function init() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+    
     snake.x = canvas.width / 2;
     snake.y = canvas.height / 2;
-    score = 0;
-    snake.length = 12;
     snake.segments = [];
+    snake.length = 12;
+    score = 0;
     foods = [];
-    // Yemekleri başlangıçta dağıt
-    for(let i=0; i<50; i++) spawnFood();
+
+    // Botları Farklı Bölgelerde Başlat
+    bots = [
+        { name: "Alpha_Predator", x: 100, y: 100, score: 600, color: '#FF0000', angle: 0, segments: [], length: 15 },
+        { name: "Shadow_Snake", x: canvas.width - 100, y: 100, score: 400, color: '#00FF00', angle: 0, segments: [], length: 12 },
+        { name: "Neon_Hunter", x: 100, y: canvas.height - 100, score: 250, color: '#00CCFF', angle: 0, segments: [], length: 10 }
+    ];
+
+    for(let i=0; i<80; i++) spawnFood();
 }
 
 function spawnFood() {
-    foods.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, radius: 5, color: 'white' });
+    foods.push({ 
+        x: Math.random() * canvas.width, 
+        y: Math.random() * canvas.height, 
+        radius: Math.random() * 3 + 4, 
+        color: `hsl(${Math.random()*360}, 100%, 50%)` 
+    });
 }
 
 // JOYSTICK KONTROLÜ
@@ -58,36 +67,62 @@ document.getElementById('boost-btn').ontouchend = () => { isBoosting = false; };
 function update() {
     if(!gameRunning) return;
 
+    // OYUNCU HAREKETİ
     let speed = isBoosting && score > 5 ? snake.speed * 2 : snake.speed;
     if(isBoosting && score > 5) {
         score -= 0.05;
         snake.length -= 0.005;
     }
-
     snake.x += Math.cos(snake.angle) * speed;
     snake.y += Math.sin(snake.angle) * speed;
     snake.segments.unshift({x: snake.x, y: snake.y});
     if(snake.segments.length > snake.length * 3) snake.segments.pop();
 
-    // DUVARLARA ÇARPMA KONTROLÜ
+    // DUVAR KONTROLÜ
     if(snake.x < 0 || snake.x > canvas.width || snake.y < 0 || snake.y > canvas.height) gameOver();
 
-    // YEMEK YEME
+    // YEMEK TOPLAMA
     foods.forEach((f, i) => {
         if(Math.hypot(snake.x - f.x, snake.y - f.y) < snake.radius + f.radius) {
             foods.splice(i, 1);
             score += 10;
-            snake.length += 1;
+            snake.length += 0.8;
             spawnFood();
         }
     });
 
-    // BOT HAREKETLERİ (Basit)
+    // --- %100 ZEKA BOT MANTIĞI ---
     bots.forEach(b => {
-        b.x += Math.cos(b.angle) * 2;
-        b.y += Math.sin(b.angle) * 2;
-        if(b.x < 0 || b.x > canvas.width) b.angle = Math.PI - b.angle;
-        if(b.y < 0 || b.y > canvas.height) b.angle = -b.angle;
+        // En yakın yemeği bulma (AI)
+        let closestFood = foods[0];
+        let minDist = Math.hypot(b.x - foods[0].x, b.y - foods[0].y);
+        
+        foods.forEach(f => {
+            let d = Math.hypot(b.x - f.x, b.y - f.y);
+            if(d < minDist) { minDist = d; closestFood = f; }
+        });
+
+        // Yemeğe doğru yönelme
+        let targetAngle = Math.atan2(closestFood.y - b.y, closestFood.x - b.x);
+        // Yumuşak dönüş
+        let diff = targetAngle - b.angle;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        b.angle += diff * 0.1;
+
+        b.x += Math.cos(b.angle) * 2.8;
+        b.y += Math.sin(b.angle) * 2.8;
+
+        // Bot vücut takibi
+        if(!b.segments) b.segments = [];
+        b.segments.unshift({x: b.x, y: b.y});
+        if(b.segments.length > b.length * 3) b.segments.pop();
+
+        // Bot yemek yerse büyüme
+        if(minDist < 20) {
+            b.length += 0.5;
+            b.score += 5;
+        }
     });
 
     updateLeaderboard();
@@ -95,14 +130,16 @@ function update() {
 
 function updateLeaderboard() {
     let list = [...bots, {name: playerName, score: Math.floor(score)}].sort((a,b) => b.score - a.score);
-    if(lbContent) lbContent.innerHTML = list.map(p => `<div class="lb-item"><span>${p.name}</span><b>${Math.floor(p.score)}</b></div>`).join('');
+    document.getElementById('lb-content').innerHTML = list.slice(0,5).map(p => `
+        <div class="lb-item"><span>${p.name}</span><b>${Math.floor(p.score)}</b></div>
+    `).join('');
     document.getElementById('scoreVal').innerText = Math.floor(score);
 }
 
 function gameOver() {
     gameRunning = false;
-    menu.style.display = 'flex'; // Alert yerine menüye dön
-    init();
+    document.getElementById('finalScore').innerText = Math.floor(score);
+    goScreen.style.display = 'flex';
 }
 
 function draw() {
@@ -115,14 +152,32 @@ function draw() {
         ctx.beginPath(); ctx.arc(f.x, f.y, f.radius, 0, Math.PI*2); ctx.fill();
     });
 
-    // Yılan
+    // Botları Çiz (Vücutlarıyla birlikte)
+    bots.forEach(b => {
+        b.segments.forEach((seg, i) => {
+            if(i % 3 === 0) {
+                ctx.fillStyle = b.color;
+                ctx.globalAlpha = 1 - (i / b.segments.length); // Kuyruğa doğru şeffaflaşma
+                ctx.beginPath(); ctx.arc(seg.x, seg.y, 12, 0, Math.PI*2); ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        });
+        ctx.fillStyle = "white";
+        ctx.font = "bold 12px Arial";
+        ctx.fillText(b.name, b.x - 20, b.y - 20);
+    });
+
+    // Oyuncuyu Çiz
     snake.segments.forEach((seg, i) => {
         if(i % 3 === 0) {
             ctx.fillStyle = snake.color;
             ctx.beginPath(); ctx.arc(seg.x, seg.y, snake.radius, 0, Math.PI*2); ctx.fill();
             if(i === 0) { // Gözler
                 ctx.fillStyle = "white";
-                ctx.beginPath(); ctx.arc(seg.x+6, seg.y-6, 5, 0, Math.PI*2); ctx.arc(seg.x+6, seg.y+6, 5, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); 
+                ctx.arc(seg.x+6, seg.y-6, 5, 0, Math.PI*2); 
+                ctx.arc(seg.x+6, seg.y+6, 5, 0, Math.PI*2); 
+                ctx.fill();
             }
         }
     });
@@ -131,15 +186,12 @@ function draw() {
 }
 
 function drawMinimap() {
-    if(!mCtx) return;
-    mCtx.clearRect(0,0,150,150);
-    // Sen (Mor)
+    mCtx.clearRect(0,0,120,120);
     mCtx.fillStyle = '#A020F0';
-    mCtx.beginPath(); mCtx.arc((snake.x/canvas.width)*150, (snake.y/canvas.height)*150, 4, 0, Math.PI*2); mCtx.fill();
-    // Botlar (Kırmızı)
-    mCtx.fillStyle = 'red';
+    mCtx.beginPath(); mCtx.arc((snake.x/canvas.width)*120, (snake.y/canvas.height)*120, 4, 0, Math.PI*2); mCtx.fill();
     bots.forEach(b => {
-        mCtx.beginPath(); mCtx.arc((b.x/canvas.width)*150, (b.y/canvas.height)*150, 3, 0, Math.PI*2); mCtx.fill();
+        mCtx.fillStyle = b.color;
+        mCtx.beginPath(); mCtx.arc((b.x/canvas.width)*120, (b.y/canvas.height)*120, 3, 0, Math.PI*2); mCtx.fill();
     });
 }
 
@@ -149,6 +201,18 @@ document.getElementById('startBtn').onclick = () => {
     playerName = document.getElementById('pName').value || "Guest";
     menu.style.display = 'none';
     gameRunning = true;
+};
+
+document.getElementById('restartBtn').onclick = () => {
+    goScreen.style.display = 'none';
+    init();
+    gameRunning = true;
+};
+
+document.getElementById('toMenuBtn').onclick = () => {
+    goScreen.style.display = 'none';
+    menu.style.display = 'flex';
+    init();
 };
 
 init(); loop();
