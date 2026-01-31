@@ -2,19 +2,91 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>404 - Yılan Kayboldu!</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Yolun Sonu! 🐍</title>
     <style>
-        body { background: black; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: sans-serif; }
-        h1 { color: #A020F0; font-size: 100px; margin: 0; }
-        p { font-size: 20px; }
-        a { color: lime; text-decoration: none; border: 1px solid lime; padding: 10px 20px; margin-top: 20px; border-radius: 5px; }
+        body {
+            background-color: black;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            text-align: center;
+        }
+
+        .glitch {
+            font-size: 120px;
+            font-weight: bold;
+            color: #A020F0;
+            text-shadow: 2px 2px 10px rgba(160, 32, 240, 0.8);
+            margin: 0;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .message {
+            font-size: 24px;
+            margin: 20px 0;
+            color: #ccc;
+        }
+
+        .snake-emoji {
+            font-size: 50px;
+            margin: 20px;
+            display: block;
+        }
+
+        .btn {
+            background-color: #A020F0;
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: bold;
+            transition: 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .btn:hover {
+            background-color: transparent;
+            border-color: #A020F0;
+            box-shadow: 0 0 20px #A020F0;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 20px;
+            font-size: 12px;
+            opacity: 0.4;
+        }
     </style>
 </head>
 <body>
-    <h1>404</h1>
-    <p>Üzgünüm Efe, bu sayfa yılanlara yem olmuş!</p>
-    <a href="/">Ana Sayfaya Dön ve Oyna</a>
-    <p style="margin-top: 50px; opacity: 0.3;">Purpleguy © 2026 - tablet power</p>
+
+    <div class="glitch">404</div>
+    
+    <span class="snake-emoji">🐍💨</span>
+
+    <div class="message">
+        Eyvah! Yılan yanlış yöne saptı ve kayboldu. <br>
+        Aradığın sayfa yılanlara yem olmuş olabilir! 🍎😵
+    </div>
+
+    <a href="/" class="btn">ANA SAYFAYA DÖN VE AVLAN</a>
+
+    <div class="footer">
+        Purpleguy © 2026 - tablet power
+    </div>
+
 </body>
 </html>
-
