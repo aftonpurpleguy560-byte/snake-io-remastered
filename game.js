@@ -26,10 +26,11 @@ function init() {
     score = 0;
     foods = [];
 
+    // Başlangıç botları - Daha rekabetçi skorlar
     bots = [
-        { id: 1, name: "Alpha_Predator", x: 200, y: 200, score: 1200, color: botColors[2], angle: Math.random()*6, segments: [], length: 30, state: 'hunting' },
-        { id: 2, name: "Shadow_Snake", x: canvas.width - 200, y: 200, score: 800, color: botColors[0], angle: Math.random()*6, segments: [], length: 25, state: 'hunting' },
-        { id: 3, name: "Neon_Hunter", x: 200, y: canvas.height - 200, score: 500, color: botColors[1], angle: Math.random()*6, segments: [], length: 20, state: 'hunting' }
+        { id: 1, name: "Alpha_Predator", x: 200, y: 200, score: 500, color: botColors[2], angle: Math.random()*6, segments: [], length: 25, speed: 3 },
+        { id: 2, name: "Shadow_Snake", x: canvas.width - 200, y: 200, score: 400, color: botColors[0], angle: Math.random()*6, segments: [], length: 20, speed: 3 },
+        { id: 3, name: "Neon_Hunter", x: 200, y: canvas.height - 200, score: 300, color: botColors[1], angle: Math.random()*6, segments: [], length: 15, speed: 3 }
     ];
 
     for(let i=0; i<120; i++) spawnFood();
@@ -67,7 +68,7 @@ function update() {
 
     // --- OYUNCU HAREKETİ ---
     let speed = isBoosting && score > 10 ? snake.speed * 2.2 : snake.speed;
-    if(isBoosting && score > 10) { score -= 0.1; snake.length -= 0.01; }
+    if(isBoosting && score > 10) { score -= 0.15; snake.length -= 0.01; }
     
     snake.x += Math.cos(snake.angle) * speed;
     snake.y += Math.sin(snake.angle) * speed;
@@ -76,20 +77,29 @@ function update() {
 
     if(snake.x < 0 || snake.x > canvas.width || snake.y < 0 || snake.y > canvas.height) gameOver();
 
-    // --- BOT AI (ZEKA SEVİYESİ 100/100) ---
+    // --- %100 GERÇEKÇİ BOT AI (DAİRE ÇİZME BUGI ÇÖZÜLDÜ) ---
     bots.forEach(b => {
-        let distToPlayer = Math.hypot(b.x - snake.x, b.y - snake.y);
-        
-        // 1. Savunma: Oyuncunun gövdesine çok yakınsa ters yöne kaç
-        let runAway = false;
+        let sensorDist = 100; 
+        let danger = false;
+
+        // Önündeki engeli sezme (Oyuncu veya diğer botlar)
         snake.segments.forEach((seg, i) => {
-            if(i < 50 && Math.hypot(b.x - seg.x, b.y - seg.y) < 60) runAway = true;
+            if(i % 5 === 0 && Math.hypot(b.x + Math.cos(b.angle)*sensorDist - seg.x, b.y + Math.sin(b.angle)*sensorDist - seg.y) < 50) danger = true;
+        });
+        
+        bots.forEach(other => {
+            if(other.id !== b.id) {
+                other.segments.forEach((seg, i) => {
+                    if(i % 5 === 0 && Math.hypot(b.x + Math.cos(b.angle)*sensorDist - seg.x, b.y + Math.sin(b.angle)*sensorDist - seg.y) < 50) danger = true;
+                } );
+            }
         });
 
-        if(runAway) {
-            b.angle += 0.2; // Panik manevrası
+        if(danger) {
+            b.angle += 0.5; // Ani ve sert dönüş (Daire çizmeyi kırar)
+            b.speed = 4.5;
         } else {
-            // 2. Saldırı/Beslenme: En yakın yemeğe odaklan
+            b.speed = 2.8;
             let closestFood = foods[0];
             let minDist = 9999;
             foods.forEach(f => {
@@ -100,43 +110,45 @@ function update() {
             let diff = targetAngle - b.angle;
             while (diff < -Math.PI) diff += Math.PI * 2;
             while (diff > Math.PI) diff -= Math.PI * 2;
-            b.angle += diff * 0.15; // Daha keskin dönüş
+            b.angle += diff * 0.15;
         }
 
-        b.x += Math.cos(b.angle) * 3.2;
-        b.y += Math.sin(b.angle) * 3.2;
+        b.x += Math.cos(b.angle) * b.speed;
+        b.y += Math.sin(b.angle) * b.speed;
+        
+        // Duvardan kaçış
+        if(b.x < 100 || b.x > canvas.width - 100 || b.y < 100 || b.y > canvas.height - 100) b.angle += 0.3;
+
         b.segments.unshift({x: b.x, y: b.y});
         if(b.segments.length > b.length * 3) b.segments.pop();
-
-        // Bot Yemek Yeme
-        foods.forEach((f, fi) => {
-            if(Math.hypot(b.x - f.x, b.y - f.y) < 20) {
-                foods.splice(fi, 1); b.length += 0.8; b.score += 15; spawnFood();
-            }
-        });
     });
 
-    // --- HITBOX SİSTEMİ ---
+    // --- HITBOX VE ÇARPIŞMALAR ---
     bots.forEach(bot => {
-        // Sen bota çarparsan
+        // Sen bota çarparsan ölürsün
         bot.segments.forEach((seg, sIdx) => {
             if (sIdx > 10 && Math.hypot(snake.x - seg.x, snake.y - seg.y) < snake.radius + 5) gameOver();
         });
-        // Bot sana çarparsa
+        // Bot sana çarparsa bot ölür
         snake.segments.forEach((seg, sIdx) => {
             if (sIdx > 10 && Math.hypot(bot.x - seg.x, bot.y - seg.y) < 15) {
                 bot.segments.forEach((bs, bi) => { if(bi % 4 === 0) spawnFood(bs.x, bs.y, 8, bot.color); });
                 bot.x = Math.random()*canvas.width; bot.y = Math.random()*canvas.height;
-                bot.segments = []; bot.length = 20; bot.score = 200;
+                bot.segments = []; bot.length = 15; bot.score = 100;
             }
         });
     });
 
-    // Oyuncu Yemek Yeme
+    // Yemek Toplama
     foods.forEach((f, i) => {
         if(Math.hypot(snake.x - f.x, snake.y - f.y) < snake.radius + f.radius) {
-            foods.splice(i, 1); score += f.isLoot ? 50 : 10; snake.length += 1; spawnFood();
+            foods.splice(i, 1); score += f.isLoot ? 50 : 10; snake.length += 0.8; spawnFood();
         }
+        bots.forEach(b => {
+            if(Math.hypot(b.x - f.x, b.y - f.y) < 20) {
+                foods.splice(i, 1); b.length += 0.6; b.score += 12; spawnFood();
+            }
+        });
     });
 
     updateLeaderboard();
@@ -162,29 +174,28 @@ function draw() {
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Yemekler
+    // Yemekler (Parlamalı)
     foods.forEach(f => {
-        ctx.shadowBlur = f.isLoot ? 15 : 0;
-        ctx.shadowColor = f.color;
+        if(f.isLoot) { ctx.shadowBlur = 15; ctx.shadowColor = f.color; }
         ctx.fillStyle = f.color;
         ctx.beginPath(); ctx.arc(f.x, f.y, f.radius, 0, Math.PI*2); ctx.fill();
         ctx.shadowBlur = 0;
     });
 
-    // Bot Çizimi (Sprite Etkisi)
+    // Botlar
     bots.forEach(b => {
         b.segments.forEach((seg, i) => {
             if(i % 3 === 0) {
                 ctx.fillStyle = b.color;
-                ctx.beginPath(); ctx.arc(seg.x, seg.y, 13 - (i*0.05), 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(seg.x, seg.y, 13 - (i*0.03), 0, Math.PI*2); ctx.fill();
             }
         });
-        // Bot Kafası
+        // Bot Gözleri
         ctx.fillStyle = "white";
         ctx.beginPath(); ctx.arc(b.x + 5, b.y - 5, 4, 0, Math.PI*2); ctx.arc(b.x + 5, b.y + 5, 4, 0, Math.PI*2); ctx.fill();
     });
 
-    // Oyuncu Çizimi (Gelişmiş Sprite)
+    // Oyuncu (Sprite/Kafa Detayı)
     snake.segments.forEach((seg, i) => {
         if(i % 3 === 0) {
             let grad = ctx.createRadialGradient(seg.x, seg.y, 2, seg.x, seg.y, snake.radius);
@@ -193,7 +204,7 @@ function draw() {
             ctx.fillStyle = (i === 0) ? grad : snake.color;
             ctx.beginPath(); ctx.arc(seg.x, seg.y, snake.radius - (i*0.02), 0, Math.PI*2); ctx.fill();
             
-            if(i === 0) { // Kafa Detayı
+            if(i === 0) {
                 ctx.fillStyle = "white";
                 ctx.beginPath(); ctx.arc(seg.x+8, seg.y-6, 6, 0, Math.PI*2); ctx.arc(seg.x+8, seg.y+6, 6, 0, Math.PI*2); ctx.fill();
                 ctx.fillStyle = "black";
@@ -201,7 +212,6 @@ function draw() {
             }
         }
     });
-
     drawMinimap();
 }
 
@@ -227,6 +237,7 @@ document.getElementById('startBtn').onclick = () => {
     const nameInput = document.getElementById('pName');
     if (!nameInput.value.trim()) {
         nameInput.style.borderColor = "red";
+        nameInput.placeholder = "İSİM ZORUNLU!";
         return;
     }
     playerName = nameInput.value;
