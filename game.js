@@ -13,26 +13,34 @@ let playerName = "Guest";
 
 let snake = { x: 0, y: 0, radius: 14, segments: [], length: 12, angle: 0, speed: 3.2, color: '#A020F0' };
 
-// BOT SİSTEMİ
+// BOTLAR VE İSİMLERİ
 let bots = [
-    { name: "Pro_Slayer", x: 500, y: 500, score: 450, color: '#00FF00' },
-    { name: "Snake_Master", x: 1000, y: 200, score: 320, color: '#FF0000' },
-    { name: "Ghost_Killer", x: 200, y: 800, score: 150, color: '#00CCFF' }
+    { name: "Pro_Slayer", x: 200, y: 300, score: 500, color: 'red', angle: Math.random() * 6 },
+    { name: "Snake_Master", x: 800, y: 150, score: 350, color: 'orange', angle: Math.random() * 6 },
+    { name: "Ghost_Killer", x: 400, y: 700, score: 200, color: 'blue', angle: Math.random() * 6 }
 ];
 
 function init() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-    snake.x = Math.random() * canvas.width;
-    snake.y = Math.random() * canvas.height;
+    snake.x = canvas.width / 2;
+    snake.y = canvas.height / 2;
     score = 0;
     snake.length = 12;
     snake.segments = [];
+    foods = [];
+    // Yemekleri başlangıçta dağıt
+    for(let i=0; i<50; i++) spawnFood();
 }
 
-// JOYSTICK
+function spawnFood() {
+    foods.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, radius: 5, color: 'white' });
+}
+
+// JOYSTICK KONTROLÜ
 const joyWrapper = document.getElementById('joystick-wrapper');
 const stick = document.getElementById('joystick-stick');
+
 joyWrapper.addEventListener('touchmove', (e) => {
     if(!gameRunning) return;
     const touch = e.touches[0];
@@ -52,9 +60,8 @@ function update() {
 
     let speed = isBoosting && score > 5 ? snake.speed * 2 : snake.speed;
     if(isBoosting && score > 5) {
-        score -= 0.1;
-        snake.length -= 0.01;
-        if(Math.random() > 0.8) foods.push({x: snake.x, y: snake.y, radius: 3, color: snake.color});
+        score -= 0.05;
+        snake.length -= 0.005;
     }
 
     snake.x += Math.cos(snake.angle) * speed;
@@ -62,59 +69,58 @@ function update() {
     snake.segments.unshift({x: snake.x, y: snake.y});
     if(snake.segments.length > snake.length * 3) snake.segments.pop();
 
-    // ÖLÜM KONTROLÜ (Çarpınca Menüye Dön)
+    // DUVARLARA ÇARPMA KONTROLÜ
     if(snake.x < 0 || snake.x > canvas.width || snake.y < 0 || snake.y > canvas.height) gameOver();
-    
-    // Kendi vücuduna çarpma
-    for(let i = 25; i < snake.segments.length; i++) {
-        if(Math.hypot(snake.x - snake.segments[i].x, snake.y - snake.segments[i].y) < 10) gameOver();
-    }
 
-    // Yiyecek Toplama
+    // YEMEK YEME
     foods.forEach((f, i) => {
         if(Math.hypot(snake.x - f.x, snake.y - f.y) < snake.radius + f.radius) {
             foods.splice(i, 1);
             score += 10;
             snake.length += 1;
+            spawnFood();
         }
     });
 
-    if(foods.length < 50) foods.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, radius: 5, color: 'white'});
-
-    // Botların skorlarını rastgele arttıralım (Gerçekçilik için)
-    bots.forEach(b => { if(Math.random() > 0.99) b.score += 5; });
+    // BOT HAREKETLERİ (Basit)
+    bots.forEach(b => {
+        b.x += Math.cos(b.angle) * 2;
+        b.y += Math.sin(b.angle) * 2;
+        if(b.x < 0 || b.x > canvas.width) b.angle = Math.PI - b.angle;
+        if(b.y < 0 || b.y > canvas.height) b.angle = -b.angle;
+    });
 
     updateLeaderboard();
 }
 
 function updateLeaderboard() {
     let list = [...bots, {name: playerName, score: Math.floor(score)}].sort((a,b) => b.score - a.score);
-    lbContent.innerHTML = list.map(p => `<div class="lb-item"><span>${p.name}</span><b>${Math.floor(p.score)}</b></div>`).join('');
+    if(lbContent) lbContent.innerHTML = list.map(p => `<div class="lb-item"><span>${p.name}</span><b>${Math.floor(p.score)}</b></div>`).join('');
     document.getElementById('scoreVal').innerText = Math.floor(score);
 }
 
 function gameOver() {
     gameRunning = false;
-    menu.style.display = 'flex'; // Alert yerine direkt menüyü göster
-    init(); // Oyunu sıfırla
+    menu.style.display = 'flex'; // Alert yerine menüye dön
+    init();
 }
 
 function draw() {
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Grid
-    ctx.strokeStyle = '#111';
-    for(let i=0; i<canvas.width; i+=100) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke(); }
+    // Yemekler
+    foods.forEach(f => {
+        ctx.fillStyle = f.color;
+        ctx.beginPath(); ctx.arc(f.x, f.y, f.radius, 0, Math.PI*2); ctx.fill();
+    });
 
-    foods.forEach(f => { ctx.fillStyle = f.color; ctx.beginPath(); ctx.arc(f.x, f.y, f.radius, 0, Math.PI*2); ctx.fill(); });
-
-    // Yılan Çizimi
+    // Yılan
     snake.segments.forEach((seg, i) => {
         if(i % 3 === 0) {
             ctx.fillStyle = snake.color;
             ctx.beginPath(); ctx.arc(seg.x, seg.y, snake.radius, 0, Math.PI*2); ctx.fill();
-            if(i === 0) { // Kafa/Sprite
+            if(i === 0) { // Gözler
                 ctx.fillStyle = "white";
                 ctx.beginPath(); ctx.arc(seg.x+6, seg.y-6, 5, 0, Math.PI*2); ctx.arc(seg.x+6, seg.y+6, 5, 0, Math.PI*2); ctx.fill();
             }
@@ -125,11 +131,12 @@ function draw() {
 }
 
 function drawMinimap() {
+    if(!mCtx) return;
     mCtx.clearRect(0,0,150,150);
-    // Kendi konumun
+    // Sen (Mor)
     mCtx.fillStyle = '#A020F0';
     mCtx.beginPath(); mCtx.arc((snake.x/canvas.width)*150, (snake.y/canvas.height)*150, 4, 0, Math.PI*2); mCtx.fill();
-    // Botların konumu (Kırmızı noktalar)
+    // Botlar (Kırmızı)
     mCtx.fillStyle = 'red';
     bots.forEach(b => {
         mCtx.beginPath(); mCtx.arc((b.x/canvas.width)*150, (b.y/canvas.height)*150, 3, 0, Math.PI*2); mCtx.fill();
@@ -137,12 +144,6 @@ function drawMinimap() {
 }
 
 function loop() { update(); draw(); requestAnimationFrame(loop); }
-
-window.setSkin = (c, el) => {
-    snake.color = c;
-    document.querySelectorAll('.skin').forEach(s => s.classList.remove('active'));
-    el.classList.add('active');
-};
 
 document.getElementById('startBtn').onclick = () => {
     playerName = document.getElementById('pName').value || "Guest";
