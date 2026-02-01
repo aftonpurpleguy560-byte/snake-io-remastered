@@ -179,3 +179,4 @@ window.startGame = () => {
 window.addScoreAdmin = () => { spawnFood(snake.x + 50, snake.y + 50, true); };
 
 init(); loop();
+
