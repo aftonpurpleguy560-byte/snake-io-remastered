@@ -5,35 +5,202 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Snake.io Pro - Purpleguy Edition</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; color: white; font-family: sans-serif; }
-        canvas { display: block; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        canvas { display: block; touch-action: none; }
         
-        /* Arayüz Katmanları */
+        /* Arayüzler */
         .overlay { position: absolute; top:0; left:0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; background: rgba(0,0,0,0.9); }
         
         /* Sağ Üst: Liderlik Tablosu */
-        #ui-leaderboard { position: absolute; top: 15px; right: 15px; z-index: 10; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; border: 1px solid #444; min-width: 160px; pointer-events: none; }
-        .leader-item { display: flex; justify-content: space-between; font-size: 13px; margin: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        #ui-leaderboard { position: absolute; top: 15px; right: 15px; z-index: 10; background: rgba(0,0,0,0.6); padding: 12px; border-radius: 10px; border: 1px solid #444; min-width: 170px; pointer-events: none; }
+        .leader-item { display: flex; justify-content: space-between; font-size: 13px; margin: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .leader-item.me { color: #A020F0; font-weight: bold; }
         
         /* Sol Üst: Canlı Skor */
         .live-score-box { position: absolute; top: 15px; left: 15px; font-size: 28px; font-weight: bold; color: #A020F0; text-shadow: 2px 2px #000; z-index: 10; }
 
         /* Sağ Alt: Mini Harita */
-        #minimap-box { position: absolute; bottom: 20px; right: 20px; width: 120px; height: 120px; background: rgba(255,255,255,0.05); border: 2px solid #333; border-radius: 10px; z-index: 5; overflow: hidden; }
+        #minimap-box { position: absolute; bottom: 20px; right: 20px; width: 130px; height: 130px; background: rgba(255,255,255,0.05); border: 2px solid #333; border-radius: 10px; z-index: 5; }
         #minimap-canvas { width: 100%; height: 100%; }
 
         /* Kontroller */
-        #joystick-wrapper { position: absolute; bottom: 40px; left: 40px; width: 120px; height: 120px; background: rgba(255,255,255,0.05); border: 2px solid #A020F0; border-radius: 50%; z-index: 10; touch-action: none; }
+        #joystick-wrapper { position: absolute; bottom: 40px; left: 40px; width: 120px; height: 120px; background: rgba(255,255,255,0.1); border: 2px solid #A020F0; border-radius: 50%; z-index: 10; touch-action: none; }
         #joystick-stick { position: absolute; width: 50px; height: 50px; background: #A020F0; border-radius: 50%; top: 35px; left: 35px; pointer-events: none; box-shadow: 0 0 15px #A020F0; }
-        #boost-btn { position: absolute; bottom: 50px; right: 160px; width: 85px; height: 85px; background: rgba(160,32,240,0.2); border: 3px solid #A020F0; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; z-index: 10; font-weight: bold; touch-action: none; user-select: none; }
+        #boost-btn { position: absolute; bottom: 50px; right: 170px; width: 85px; height: 85px; background: rgba(160,32,240,0.3); border: 3px solid #A020F0; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; z-index: 10; font-weight: bold; user-select: none; }
 
-        /* Menü ve Butonlar */
-        input { padding: 12px; border-radius: 20px; border: 2px solid #A020F0; background: #000; color: #fff; text-align: center; width: 200px; margin-bottom: 15px; font-size: 16px; }
-        button { padding: 12px 35px; border-radius: 25px; border: none; background: #A020F0; color: white; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.2s; }
-        button:active { transform: scale(0.95); }
+        /* Menü Elemanları */
+        input { padding: 12px; border-radius: 20px; border: 2px solid #A020F0; background: #111; color: #fff; text-align: center; width: 220px; margin-bottom: 15px; font-size: 16px; outline: none; }
+        button { padding: 12px 40px; border-radius: 25px; border: none; background: #A020F0; color: white; font-weight: bold; cursor: pointer; font-size: 18px; box-shadow: 0 4px 10px rgba(160,32,240,0.4); }
         
-        #adminPanel { display: none; position: absolute; top: 20%; left: 50%; transform: translateX(-50%); background: rgba(160,32,240,0.9); padding: 20px; z-index: 200; border-radius: 15px; text-align: center; border: 2px solid white; }
-        .footer { margin-top: 25px; opacity: 0.6; font-size: 12px; cursor: pointer; color: #A020F0; font-weight: bold; }
+        #adminPanel { display: none; position: absolute; top: 20%; left: 50%; transform: translateX(-50%); background: #A020F0; padding: 25px; z-index: 200; border-radius: 15px; text-align: center; border: 3px solid white; box-shadow: 0 0 30px #A020F0; }
+        .footer { margin-top: 25px; opacity: 0.7; font-size: 13px; cursor: pointer; color: #A020F0; }
+    </style>
+</head>
+<body>
+
+    <div class="live-score-box">SKOR: <span id="liveScore">0</span></div>
+    
+    <div id="ui-leaderboard">
+        <div style="text-align: center; color: #ffcc00; font-size: 12px; font-weight: bold; margin-bottom: 8px;">TOP 5 YILAN</div>
+        <div id="leaderboardList"></div>
+    </div>
+
+    <div id="minimap-box">
+        <canvas id="minimap-canvas"></canvas>
+    </div>
+
+    <div id="menu" class="overlay">
+        <h1 style="color:#A020F0; font-size: 50px; text-shadow: 0 0 20px #A020F0; margin-bottom: 20px;">SNAKE.IO</h1>
+        <input type="text" id="pName" placeholder="Oyuncu Adı..." maxlength="12">
+        <button onclick="startGame()">OYUNA BAŞLA</button>
+        <div class="footer" onclick="handleSigClick()">Purpleguy © 2026 - tablet power</div>
+    </div>
+
+    <div id="gameOverScreen" class="overlay" style="display:none;">
+        <h1 style="color:red; font-size:60px; text-shadow: 0 0 20px red;">ÖLDÜN!</h1>
+        <h2 id="finalScoreDisplay">Skor: 0</h2>
+        <button onclick="location.reload()">TEKRAR DENE</button>
+        <div class="footer" style="margin-top:40px;">Purpleguy © 2026 - tablet power</div>
+    </div>
+
+    <div id="adminPanel">
+        <h3 style="margin: 0 0 15px 0;">ADMİN YETKİLERİ</h3>
+        <button onclick="addPowerAdmin()" style="background:white; color:#A020F0;">+500 SKOR EKLE</button><br><br>
+        <button onclick="closeAdmin()" style="background:#222; font-size: 14px; padding: 5px 15px;">KAPAT</button>
+    </div>
+
+    <div id="joystick-wrapper"><div id="joystick-stick"></div></div>
+    <div id="boost-btn">BOOST</div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const mCanvas = document.getElementById('minimap-canvas');
+        const mCtx = mCanvas.getContext('2d');
+
+        const WORLD_SIZE = 4000;
+        let gameRunning = false;
+        let score = 0;
+        let foods = [];
+        let isBoosting = false;
+        let playerName = localStorage.getItem('savedPlayerName') || "Efe";
+
+        let camera = { x: 0, y: 0 };
+        let snake = { x: WORLD_SIZE/2, y: WORLD_SIZE/2, radius: 15, segments: [], length: 15, angle: 0, speed: 5 };
+        let bots = [];
+
+        function init() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            mCanvas.width = 130; mCanvas.height = 130;
+            document.getElementById('pName').value = playerName;
+            
+            // Botları ve yemekleri oluştur
+            const bNames = ["Alpha", "Shadow", "Neon", "Viper", "Ghost"];
+            for(let i=0; i<20; i++) {
+                bots.push({
+                    name: bNames[i % 5] + "_" + (i+1),
+                    x: Math.random()*WORLD_SIZE, y: Math.random()*WORLD_SIZE,
+                    color: `hsl(${Math.random()*360}, 70%, 50%)`,
+                    segments: [], length: 20 + Math.random()*30, angle: Math.random()*6, speed: 4, score: Math.floor(Math.random()*500)
+                });
+            }
+            for(let i=0; i<500; i++) spawnFood();
+        }
+
+        function spawnFood() {
+            foods.push({ x: Math.random()*WORLD_SIZE, y: Math.random()*WORLD_SIZE, r: Math.random()*3+3, c: `hsl(${Math.random()*360}, 100%, 50%)` });
+        }
+
+        // Joystick ve Boost
+        const joy = document.getElementById('joystick-wrapper');
+        const stick = document.getElementById('joystick-stick');
+        joy.addEventListener('touchmove', (e) => {
+            if(!gameRunning) return;
+            const t = e.touches[0]; const r = joy.getBoundingClientRect();
+            const dx = t.clientX - (r.left + r.width/2); const dy = t.clientY - (r.top + r.height/2);
+            snake.angle = Math.atan2(dy, dx);
+            const d = Math.min(Math.hypot(dx, dy), r.width/2);
+            stick.style.transform = `translate(${Math.cos(snake.angle)*d}px, ${Math.sin(snake.angle)*d}px)`;
+        });
+        document.getElementById('boost-btn').addEventListener('touchstart', (e) => { e.preventDefault(); isBoosting = true; });
+        document.getElementById('boost-btn').addEventListener('touchend', () => isBoosting = false);
+
+        // Admin Tetikleyici
+        let clickCount = 0;
+        window.handleSigClick = () => { if(++clickCount >= 3) { document.getElementById('adminPanel').style.display='block'; clickCount=0; }};
+        window.addPowerAdmin = () => { score += 500; snake.length += 10; };
+        window.closeAdmin = () => document.getElementById('adminPanel').style.display='none';
+
+        function update() {
+            if(!gameRunning) return;
+            let s = isBoosting && score > 20 ? 10 : 5;
+            if(isBoosting && score > 20) { score -= 0.1; snake.length -= 0.02; }
+
+            snake.x += Math.cos(snake.angle)*s; snake.y += Math.sin(snake.angle)*s;
+            camera.x = snake.x - canvas.width/2; camera.y = snake.y - canvas.height/2;
+
+            snake.segments.unshift({x: snake.x, y: snake.y});
+            if(snake.segments.length > snake.length*3) snake.segments.pop();
+
+            if(snake.x<0 || snake.x>WORLD_SIZE || snake.y<0 || snake.y>WORLD_SIZE) gameOver();
+
+            foods.forEach((f, i) => {
+                if(Math.hypot(snake.x-f.x, snake.y-f.y) < 25) { score += 10; snake.length += 0.4; foods.splice(i,1); spawnFood(); }
+            });
+
+            bots.forEach(b => {
+                b.x += Math.cos(b.angle)*b.speed; b.y += Math.sin(b.angle)*b.speed;
+                b.segments.unshift({x:b.x, y:b.y}); if(b.segments.length > b.length*3) b.segments.pop();
+                if(Math.random()<0.02) b.angle += (Math.random()-0.5);
+                if(b.x<0 || b.x>WORLD_SIZE || b.y<0 || b.y>WORLD_SIZE) b.angle += 0.5;
+                if(Math.hypot(snake.x - b.x, snake.y - b.y) < 18) gameOver();
+            });
+            updateUI();
+        }
+
+        function draw() {
+            ctx.fillStyle = "#000"; ctx.fillRect(0,0,canvas.width,canvas.height);
+            ctx.save(); ctx.translate(-camera.x, -camera.y);
+            
+            // Grid
+            ctx.strokeStyle = "#111";
+            for(let i=0; i<WORLD_SIZE; i+=200) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,WORLD_SIZE); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(WORLD_SIZE,i); ctx.stroke(); }
+
+            foods.forEach(f => { ctx.fillStyle = f.c; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI*2); ctx.fill(); });
+
+            const drawYilan = (segs, color) => {
+                segs.forEach((s, i) => {
+                    ctx.fillStyle = color; ctx.beginPath(); ctx.arc(s.x, s.y, 14, 0, Math.PI*2); ctx.fill();
+                    if(i===0) { ctx.fillStyle="white"; ctx.beginPath(); ctx.arc(s.x+5, s.y-5, 4, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(s.x+5, s.y+5, 4, 0, Math.PI*2); ctx.fill(); }
+                });
+            };
+            bots.forEach(b => drawYilan(b.segments, b.color));
+            drawYilan(snake.segments, "#A020F0");
+            ctx.restore();
+            drawMinimap();
+        }
+
+        function drawMinimap() {
+            mCtx.clearRect(0,0,130,130);
+            mCtx.fillStyle = "red"; mCtx.beginPath(); mCtx.arc((snake.x/WORLD_SIZE)*130, (snake.y/WORLD_SIZE)*130, 4, 0, Math.PI*2); mCtx.fill();
+        }
+
+        function updateUI() {
+            document.getElementById('liveScore').innerText = Math.floor(score);
+            let l = [...bots, {name: playerName, score: Math.floor(score)}].sort((a,b)=>b.score-a.score).slice(0,5);
+            document.getElementById('leaderboardList').innerHTML = l.map(x => `<div class="leader-item ${x.name===playerName?'me':''}"><span>${x.name}</span><span>${x.score}</span></div>`).join('');
+        }
+
+        function gameOver() { gameRunning = false; document.getElementById('finalScoreDisplay').innerText = "Skor: " + Math.floor(score); document.getElementById('gameOverScreen').style.display = 'flex'; }
+        window.startGame = () => { playerName = document.getElementById('pName').value || "Efe"; document.getElementById('menu').style.display='none'; gameRunning = true; };
+
+        init();
+        (function loop() { update(); draw(); requestAnimationFrame(loop); })();
+    </script>
+</body>
+</html>
     </style>
 </head>
 <body>
