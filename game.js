@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 const shopItemsDiv = document.getElementById('shopItems');
 
 // OYUN AYARLARI
-const WORLD_SIZE = 3000; // Harita artık devasa!
+const WORLD_SIZE = 4000; // Harita devasa
 let gameRunning = false;
 let score = 0;
 let points = parseInt(localStorage.getItem('points')) || 0;
@@ -14,12 +14,13 @@ let playerName = "";
 // KAMERA SİSTEMİ
 let camera = { x: 0, y: 0 };
 
-// MARKET SİSTEMİ
+// MARKET SİSTEMİ (100 SKOR = 75 PUAN)
 let skins = [
     { name: "Mor (Başlangıç)", color: "#A020F0", price: 0, owned: true },
     { name: "Mavi Neon", color: "#00CCFF", price: 500, owned: false },
     { name: "Zümrüt", color: "#00FF00", price: 1000, owned: false },
-    { name: "Altın", color: "#FFD700", price: 2500, owned: false }
+    { name: "Altın", color: "#FFD700", price: 2500, owned: false },
+    { name: "Kıyamet", color: "#FF0000", price: 5000, owned: false }
 ];
 let activeColor = "#A020F0";
 
@@ -32,9 +33,8 @@ function init() {
     loadShop();
     updatePointsUI();
     
-    // Botları rastgele büyük haritaya dağıt
     bots = [];
-    for(let i=0; i<15; i++) {
+    for(let i=0; i<20; i++) {
         bots.push({
             id: i,
             name: "Bot_"+i,
@@ -42,12 +42,12 @@ function init() {
             y: Math.random()*WORLD_SIZE,
             color: `hsl(${Math.random()*360}, 100%, 50%)`,
             segments: [],
-            length: 15 + Math.random()*20,
+            length: 20 + Math.random()*30,
             angle: Math.random()*6,
             speed: 3
         });
     }
-    for(let i=0; i<300; i++) spawnFood();
+    for(let i=0; i<400; i++) spawnFood();
 }
 
 function spawnFood() {
@@ -59,24 +59,20 @@ function spawnFood() {
     });
 }
 
-// MARKET FONKSİYONLARI
+// MARKET VE PUAN SİSTEMİ
 function loadShop() {
     let savedSkins = JSON.parse(localStorage.getItem('ownedSkins'));
-    if(savedSkins) {
-        skins.forEach((s, i) => s.owned = savedSkins[i]);
-    }
+    if(savedSkins) skins.forEach((s, i) => s.owned = savedSkins[i]);
     
     shopItemsDiv.innerHTML = "";
     skins.forEach((skin, index) => {
         let btnText = skin.owned ? "Kostümü Seç" : skin.price + " Puan";
         let btnClass = skin.owned ? "select-btn" : "buy-btn";
-        
         shopItemsDiv.innerHTML += `
             <div class="shop-item">
                 <span style="color:${skin.color}">● ${skin.name}</span>
                 <button class="shop-btn ${btnClass}" onclick="handleShop(${index})">${btnText}</button>
-            </div>
-        `;
+            </div>`;
     });
 }
 
@@ -84,17 +80,12 @@ function handleShop(index) {
     let skin = skins[index];
     if(skin.owned) {
         activeColor = skin.color;
-        alert(skin.name + " seçildi!");
-    } else {
-        if(points >= skin.price) {
-            points -= skin.price;
-            skin.owned = true;
-            saveData();
-            loadShop();
-            updatePointsUI();
-        } else {
-            alert("Yetersiz puan!");
-        }
+    } else if(points >= skin.price) {
+        points -= skin.price;
+        skin.owned = true;
+        saveData();
+        loadShop();
+        updatePointsUI();
     }
 }
 
@@ -107,33 +98,60 @@ function updatePointsUI() {
     document.getElementById('userPoints').innerText = Math.floor(points);
 }
 
-// HAREKET VE KAMERA
-window.addEventListener('keydown', (e) => { if(e.key === 'p') document.getElementById('adminPanel').style.display = 'block'; });
+// --- SADECE MOVEPAD (JOYSTICK) SİSTEMİ ---
+const joyWrapper = document.getElementById('joystick-wrapper');
+const stick = document.getElementById('joystick-stick');
+
+joyWrapper.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = joyWrapper.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    const dx = touch.clientX - centerX;
+    const dy = touch.clientY - centerY;
+    const dist = Math.hypot(dx, dy);
+    
+    snake.angle = Math.atan2(dy, dx);
+    
+    const moveDist = Math.min(dist, rect.width / 2);
+    const stickX = Math.cos(snake.angle) * moveDist;
+    const stickY = Math.sin(snake.angle) * moveDist;
+    
+    stick.style.transform = `translate(${stickX}px, ${stickY}px)`;
+}, { passive: false });
+
+joyWrapper.addEventListener('touchend', () => {
+    stick.style.transform = `translate(0px, 0px)`;
+});
+
+// BOOST BUTONU
+document.getElementById('boost-btn').ontouchstart = (e) => { e.preventDefault(); isBoosting = true; };
+document.getElementById('boost-btn').ontouchend = () => { isBoosting = false; };
 
 function update() {
     if(!gameRunning) return;
 
-    let speed = isBoosting && score > 10 ? snake.speed * 2 : snake.speed;
-    if(isBoosting && score > 10) { score -= 0.2; snake.length -= 0.02; }
+    let speed = isBoosting && score > 20 ? snake.speed * 2 : snake.speed;
+    if(isBoosting && score > 20) { score -= 0.2; snake.length -= 0.02; }
 
     snake.x += Math.cos(snake.angle) * speed;
     snake.y += Math.sin(snake.angle) * speed;
 
-    // Kamera takibi
     camera.x = snake.x - canvas.width / 2;
     camera.y = snake.y - canvas.height / 2;
 
     snake.segments.unshift({x: snake.x, y: snake.y});
     if(snake.segments.length > snake.length * 3) snake.segments.pop();
 
-    // Sınır kontrolü
     if(snake.x < 0 || snake.x > WORLD_SIZE || snake.y < 0 || snake.y > WORLD_SIZE) gameOver();
 
-    // Bot AI (Harita sınırları içinde)
+    // Bot Zekası (Harita içi)
     bots.forEach(b => {
-        let margin = 100;
+        let margin = 150;
         if(b.x < margin || b.x > WORLD_SIZE-margin || b.y < margin || b.y > WORLD_SIZE-margin) {
-            b.angle += 0.2;
+            b.angle += 0.3;
         }
         b.x += Math.cos(b.angle) * b.speed;
         b.y += Math.sin(b.angle) * b.speed;
@@ -141,24 +159,29 @@ function update() {
         if(b.segments.length > b.length * 3) b.segments.pop();
     });
 
-    // Yemek yeme
+    // Yemek toplama ve Çarpışma
     foods.forEach((f, i) => {
-        if(Math.hypot(snake.x - f.x, snake.y - f.y) < 20) {
+        if(Math.hypot(snake.x - f.x, snake.y - f.y) < 25) {
             foods.splice(i, 1); score += 10; snake.length += 0.5; spawnFood();
         }
     });
-
-    // Admin skor ekleme her zaman puanı etkilemez, sadece oyun sonu skoru etkiler
 }
 
 function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
     ctx.save();
     ctx.translate(-camera.x, -camera.y);
 
-    // Harita Sınırı
-    ctx.strokeStyle = "#333";
-    ctx.strokeRect(0, 0, WORLD_SIZE, WORLD_SIZE);
+    // Izgara Arka Plan (Grid)
+    ctx.strokeStyle = "#111";
+    for(let x=0; x<WORLD_SIZE; x+=100) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, WORLD_SIZE); ctx.stroke();
+    }
+    for(let y=0; y<WORLD_SIZE; y+=100) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(WORLD_SIZE, y); ctx.stroke();
+    }
 
     // Yemekler
     foods.forEach(f => {
@@ -185,7 +208,6 @@ function draw() {
 
 function gameOver() {
     gameRunning = false;
-    // 100 SKOR = 75 PUAN HESABI
     let earnedPoints = (score / 100) * 75;
     points += earnedPoints;
     saveData();
@@ -193,26 +215,18 @@ function gameOver() {
     location.reload();
 }
 
-// ADMİN KOMUTLARI
+// ADMİN PANELİ (Klavyeden 'P' tuşu)
 window.addScoreAdmin = () => { score += 5000; snake.length += 50; };
-window.killAllBots = () => { bots = []; alert("Tüm botlar silindi!"); };
+window.killAllBots = () => { bots = []; alert("Temizlendi!"); };
 window.closeAdmin = () => { document.getElementById('adminPanel').style.display = 'none'; };
 
 function loop() { update(); draw(); requestAnimationFrame(loop); }
-window.startGame = () => { 
+window.startGame = () => {
     if(!document.getElementById('pName').value) return alert("İsim yaz!");
     playerName = document.getElementById('pName').value;
     document.getElementById('menu').style.display = 'none';
     gameRunning = true;
 };
-
-// JOYSTICK (Basitleştirilmiş)
-canvas.addEventListener('touchmove', (e) => {
-    let touch = e.touches[0];
-    let dx = touch.clientX - canvas.width / 2;
-    let dy = touch.clientY - canvas.height / 2;
-    snake.angle = Math.atan2(dy, dx);
-});
 
 init(); loop();
 
