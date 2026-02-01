@@ -7,70 +7,56 @@
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; color: white; font-family: sans-serif; }
         canvas { display: block; }
+        .overlay { position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; background: rgba(0,0,0,0.92); }
         
-        /* Arayüz Katmanları */
-        .overlay { position: absolute; top:0; left:0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; background: rgba(0,0,0,0.9); }
+        #top-ui { position: absolute; top: 15px; left: 15px; z-index: 10; font-size: 18px; display: flex; gap: 20px; }
+        .shop-container { background: #111; padding: 15px; border-radius: 12px; border: 2px solid #A020F0; margin: 15px 0; width: 280px; }
+        .shop-item { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; padding-bottom: 5px; border-bottom: 1px solid #222; }
         
-        /* Sağ Üst: Liderlik Tablosu */
-        #ui-leaderboard { position: absolute; top: 15px; right: 15px; z-index: 10; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; border: 1px solid #444; min-width: 160px; pointer-events: none; }
-        .leader-item { display: flex; justify-content: space-between; font-size: 13px; margin: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        
-        /* Sol Üst: Canlı Skor */
-        .live-score-box { position: absolute; top: 15px; left: 15px; font-size: 28px; font-weight: bold; color: #A020F0; text-shadow: 2px 2px #000; z-index: 10; }
+        button { padding: 12px 35px; border-radius: 25px; border: none; background: #A020F0; color: white; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { transform: scale(1.05); box-shadow: 0 0 15px #A020F0; }
+        .buy-btn { background: #ffcc00; color: black; padding: 5px 10px; font-size: 12px; }
+        .select-btn { background: #00ff00; color: black; padding: 5px 10px; font-size: 12px; }
 
-        /* Sağ Alt: Mini Harita */
-        #minimap-box { position: absolute; bottom: 20px; right: 20px; width: 120px; height: 120px; background: rgba(255,255,255,0.05); border: 2px solid #333; border-radius: 10px; z-index: 5; overflow: hidden; }
-        #minimap-canvas { width: 100%; height: 100%; }
-
-        /* Kontroller */
-        #joystick-wrapper { position: absolute; bottom: 40px; left: 40px; width: 120px; height: 120px; background: rgba(255,255,255,0.05); border: 2px solid #A020F0; border-radius: 50%; z-index: 10; touch-action: none; }
-        #joystick-stick { position: absolute; width: 50px; height: 50px; background: #A020F0; border-radius: 50%; top: 35px; left: 35px; pointer-events: none; box-shadow: 0 0 15px #A020F0; }
-        #boost-btn { position: absolute; bottom: 50px; right: 160px; width: 85px; height: 85px; background: rgba(160,32,240,0.2); border: 3px solid #A020F0; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; z-index: 10; font-weight: bold; touch-action: none; user-select: none; }
-
-        /* Menü ve Butonlar */
-        input { padding: 12px; border-radius: 20px; border: 2px solid #A020F0; background: #000; color: #fff; text-align: center; width: 200px; margin-bottom: 15px; font-size: 16px; }
-        button { padding: 12px 35px; border-radius: 25px; border: none; background: #A020F0; color: white; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.2s; }
-        button:active { transform: scale(0.95); }
+        #adminPanel { display: none; position: absolute; top: 20%; left: 50%; transform: translateX(-50%); background: rgba(255,0,0,0.9); padding: 25px; z-index: 200; border-radius: 15px; text-align: center; }
         
-        #adminPanel { display: none; position: absolute; top: 20%; left: 50%; transform: translateX(-50%); background: rgba(160,32,240,0.9); padding: 20px; z-index: 200; border-radius: 15px; text-align: center; border: 2px solid white; }
-        .footer { margin-top: 25px; opacity: 0.6; font-size: 12px; cursor: pointer; color: #A020F0; font-weight: bold; }
+        #joystick-wrapper { position: absolute; bottom: 40px; left: 40px; width: 120px; height: 120px; background: rgba(255,255,255,0.05); border: 2px solid rgba(160,32,240,0.3); border-radius: 50%; z-index: 10; touch-action: none; }
+        #joystick-stick { position: absolute; width: 50px; height: 50px; background: #A020F0; border-radius: 50%; top: 35px; left: 35px; pointer-events: none; }
+        #boost-btn { position: absolute; bottom: 50px; right: 50px; width: 90px; height: 90px; background: rgba(160,32,240,0.2); border: 3px solid #A020F0; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; z-index: 10; font-weight: bold; touch-action: none; user-select: none; }
+
+        .footer { margin-top: 25px; opacity: 0.6; font-size: 12px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <div class="live-score-box">SKOR: <span id="liveScore">0</span></div>
-    
-    <div id="ui-leaderboard">
-        <div style="text-align: center; color: #ffcc00; font-size: 12px; font-weight: bold; margin-bottom: 5px;">SIRALAMA</div>
-        <div id="leaderboardList"></div>
-    </div>
-
-    <div id="minimap-box">
-        <canvas id="minimap-canvas"></canvas>
+    <div id="top-ui">
+        <div>Puan: <span id="userPoints">0</span></div>
+        <div>Skor: <span id="liveScore">0</span></div>
     </div>
 
     <div id="menu" class="overlay">
-        <h1 style="color:#A020F0; font-size: 45px; text-shadow: 0 0 15px #A020F0; margin-bottom: 10px;">SNAKE.IO PRO</h1>
-        <input type="text" id="pName" placeholder="Adını Yaz..." maxlength="12">
-        <button onclick="startGame()">OYUNA BAŞLA</button>
-        <div class="footer" onclick="handleSigClick()">Purpleguy © 2026 - tablet power</div>
-    </div>
+        <h1 style="color:#A020F0; font-size: 45px; text-shadow: 0 0 15px #A020F0;">Snake.io Pro</h1>
+        <input type="text" id="pName" placeholder="Adını Yaz..." maxlength="12" style="padding:12px; border-radius:20px; border:2px solid #A020F0; background:#000; color:#fff; text-align:center; width:220px; font-size:18px;">
+        
+        <div class="shop-container">
+            <h4 style="margin:0 0 10px 0; text-align:center;">Kostüm Marketi</h4>
+            <div id="shopItems"></div>
+        </div>
 
-    <div id="gameOverScreen" class="overlay" style="display:none;">
-        <h1 style="color:red; font-size:60px; text-shadow: 0 0 20px red; margin: 0;">ÖLDÜN!</h1>
-        <h2 id="finalScoreDisplay" style="margin: 10px 0;">Skor: 0</h2>
-        <button onclick="location.reload()">TEKRAR DENE</button>
-        <div class="footer" style="margin-top:40px;">Purpleguy © 2026 - tablet power</div>
+        <button onclick="startGame()">OYUNA BAŞLA</button>
+        <div class="footer" onclick="handleSignatureClick()">Purpleguy © 2026 - tablet power</div>
     </div>
 
     <div id="adminPanel">
-        <h3 style="margin-top:0;">ADMİN PANELİ</h3>
-        <button onclick="addPowerAdmin()" style="background:white; color:black; margin-bottom:10px;">Purpleguy Power-Up</button><br>
-        <button onclick="closeAdmin()" style="background:#333;">Kapat</button>
+        <h3>ADMİN PANELİ</h3>
+        <button onclick="addPowerUpAdmin()">Purpleguy Power-up At</button><br><br>
+        <button onclick="killAllBots()">Tüm Botları Patlat</button><br><br>
+        <button onclick="closeAdmin()" style="background:#333;">Paneli Kapat</button>
     </div>
 
     <div id="joystick-wrapper"><div id="joystick-stick"></div></div>
     <div id="boost-btn">BOOST</div>
+
     <canvas id="gameCanvas"></canvas>
 
     <script src="game.js"></script>
