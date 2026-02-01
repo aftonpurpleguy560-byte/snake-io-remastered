@@ -3,272 +3,194 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake.io Pro - Purpleguy Edition</title>
+    <title>Snake.io Pro - Purpleguy</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; color: white; font-family: sans-serif; }
         canvas { display: block; touch-action: none; }
         
-        /* Arayüzler */
-        .overlay { position: absolute; top:0; left:0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; background: rgba(0,0,0,0.9); }
-        
-        /* Sağ Üst: Liderlik Tablosu */
-        #ui-leaderboard { position: absolute; top: 15px; right: 15px; z-index: 10; background: rgba(0,0,0,0.6); padding: 12px; border-radius: 10px; border: 1px solid #444; min-width: 170px; pointer-events: none; }
-        .leader-item { display: flex; justify-content: space-between; font-size: 13px; margin: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .leader-item.me { color: #A020F0; font-weight: bold; }
-        
-        /* Sol Üst: Canlı Skor */
-        .live-score-box { position: absolute; top: 15px; left: 15px; font-size: 28px; font-weight: bold; color: #A020F0; text-shadow: 2px 2px #000; z-index: 10; }
+        /* Arayüz Elemanları */
+        .ui-panel { position: absolute; z-index: 10; pointer-events: none; }
+        #leaderboard { top: 20px; right: 20px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; border: 1px solid #444; min-width: 150px; }
+        #score-board { top: 20px; left: 20px; font-size: 24px; font-weight: bold; color: #A020F0; }
+        #minimap-container { bottom: 20px; right: 20px; width: 120px; height: 120px; background: rgba(255,255,255,0.1); border: 2px solid #555; border-radius: 10px; }
 
-        /* Sağ Alt: Mini Harita */
-        #minimap-box { position: absolute; bottom: 20px; right: 20px; width: 130px; height: 130px; background: rgba(255,255,255,0.05); border: 2px solid #333; border-radius: 10px; z-index: 5; }
-        #minimap-canvas { width: 100%; height: 100%; }
-
+        /* Menü ve Ölüm Ekranı */
+        .overlay { position: absolute; top:0; left:0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; background: rgba(0,0,0,0.85); }
+        .btn { padding: 12px 30px; border-radius: 20px; border: none; background: #A020F0; color: white; font-weight: bold; cursor: pointer; margin: 10px; pointer-events: auto; }
+        
         /* Kontroller */
-        #joystick-wrapper { position: absolute; bottom: 40px; left: 40px; width: 120px; height: 120px; background: rgba(255,255,255,0.1); border: 2px solid #A020F0; border-radius: 50%; z-index: 10; touch-action: none; }
-        #joystick-stick { position: absolute; width: 50px; height: 50px; background: #A020F0; border-radius: 50%; top: 35px; left: 35px; pointer-events: none; box-shadow: 0 0 15px #A020F0; }
-        #boost-btn { position: absolute; bottom: 50px; right: 170px; width: 85px; height: 85px; background: rgba(160,32,240,0.3); border: 3px solid #A020F0; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; z-index: 10; font-weight: bold; user-select: none; }
+        #joy-base { position: absolute; bottom: 40px; left: 40px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%; z-index: 20; }
+        #joy-stick { position: absolute; width: 40px; height: 40px; background: #A020F0; border-radius: 50%; top: 30px; left: 30px; }
+        #boost-btn { position: absolute; bottom: 45px; right: 160px; width: 70px; height: 70px; background: rgba(160,32,240,0.4); border: 2px solid #A020F0; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 20; pointer-events: auto; font-size: 12px; }
 
-        /* Menü Elemanları */
-        input { padding: 12px; border-radius: 20px; border: 2px solid #A020F0; background: #111; color: #fff; text-align: center; width: 220px; margin-bottom: 15px; font-size: 16px; outline: none; }
-        button { padding: 12px 40px; border-radius: 25px; border: none; background: #A020F0; color: white; font-weight: bold; cursor: pointer; font-size: 18px; box-shadow: 0 4px 10px rgba(160,32,240,0.4); }
-        
-        #adminPanel { display: none; position: absolute; top: 20%; left: 50%; transform: translateX(-50%); background: #A020F0; padding: 25px; z-index: 200; border-radius: 15px; text-align: center; border: 3px solid white; box-shadow: 0 0 30px #A020F0; }
-        .footer { margin-top: 25px; opacity: 0.7; font-size: 13px; cursor: pointer; color: #A020F0; }
+        .footer { position: absolute; bottom: 10px; width: 100%; text-align: center; font-size: 10px; color: #666; }
     </style>
 </head>
 <body>
 
-    <div class="live-score-box">SKOR: <span id="liveScore">0</span></div>
+    <div id="score-board" class="ui-panel">Skor: 0</div>
     
-    <div id="ui-leaderboard">
-        <div style="text-align: center; color: #ffcc00; font-size: 12px; font-weight: bold; margin-bottom: 8px;">TOP 5 YILAN</div>
-        <div id="leaderboardList"></div>
+    <div id="leaderboard" class="ui-panel">
+        <div style="text-align: center; border-bottom: 1px solid #666; margin-bottom: 5px; font-size: 12px;">SIRALAMA</div>
+        <div id="leader-list"></div>
     </div>
 
-    <div id="minimap-box">
-        <canvas id="minimap-canvas"></canvas>
+    <div id="minimap-container" class="ui-panel">
+        <canvas id="minimap" width="120" height="120"></canvas>
     </div>
 
     <div id="menu" class="overlay">
-        <h1 style="color:#A020F0; font-size: 50px; text-shadow: 0 0 20px #A020F0; margin-bottom: 20px;">SNAKE.IO</h1>
-        <input type="text" id="pName" placeholder="Oyuncu Adı..." maxlength="12">
-        <button onclick="startGame()">OYUNA BAŞLA</button>
-        <div class="footer" onclick="handleSigClick()">Purpleguy © 2026 - tablet power</div>
+        <h1 style="color:#A020F0; text-shadow: 0 0 10px #A020F0;">Snake.io Pro</h1>
+        <button class="btn" onclick="startGame()">OYUNA BAŞLA</button>
+        <div class="footer">Purpleguy © 2026 - tablet power</div>
     </div>
 
-    <div id="gameOverScreen" class="overlay" style="display:none;">
-        <h1 style="color:red; font-size:60px; text-shadow: 0 0 20px red;">ÖLDÜN!</h1>
-        <h2 id="finalScoreDisplay">Skor: 0</h2>
-        <button onclick="location.reload()">TEKRAR DENE</button>
-        <div class="footer" style="margin-top:40px;">Purpleguy © 2026 - tablet power</div>
+    <div id="death-screen" class="overlay" style="display:none;">
+        <h1 style="color:red;">ÖLDÜN!</h1>
+        <p id="final-score"></p>
+        <button class="btn" onclick="location.reload()">TEKRAR DENE</button>
     </div>
 
-    <div id="adminPanel">
-        <h3 style="margin: 0 0 15px 0;">ADMİN YETKİLERİ</h3>
-        <button onclick="addPowerAdmin()" style="background:white; color:#A020F0;">+500 SKOR EKLE</button><br><br>
-        <button onclick="closeAdmin()" style="background:#222; font-size: 14px; padding: 5px 15px;">KAPAT</button>
-    </div>
-
-    <div id="joystick-wrapper"><div id="joystick-stick"></div></div>
+    <div id="joy-base"><div id="joy-stick"></div></div>
     <div id="boost-btn">BOOST</div>
-    <canvas id="gameCanvas"></canvas>
+    <canvas id="game"></canvas>
 
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const mCanvas = document.getElementById('minimap-canvas');
-        const mCtx = mCanvas.getContext('2d');
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const mCanvas = document.getElementById('minimap');
+const mCtx = mCanvas.getContext('2d');
 
-        const WORLD_SIZE = 4000;
-        let gameRunning = false;
-        let score = 0;
-        let foods = [];
-        let isBoosting = false;
-        let playerName = localStorage.getItem('savedPlayerName') || "Efe";
+let world = { w: 3000, h: 3000 };
+let snake = { x: 1500, y: 1500, angle: 0, segments: [], len: 20, speed: 4 };
+let foods = [];
+let bots = [];
+let gameActive = false;
+let isBoosting = false;
 
-        let camera = { x: 0, y: 0 };
-        let snake = { x: WORLD_SIZE/2, y: WORLD_SIZE/2, radius: 15, segments: [], length: 15, angle: 0, speed: 5 };
-        let bots = [];
+// Başlatma
+function init() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    for(let i=0; i<400; i++) spawnFood();
+    for(let i=0; i<15; i++) spawnBot();
+}
 
-        function init() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            mCanvas.width = 130; mCanvas.height = 130;
-            document.getElementById('pName').value = playerName;
-            
-            // Botları ve yemekleri oluştur
-            const bNames = ["Alpha", "Shadow", "Neon", "Viper", "Ghost"];
-            for(let i=0; i<20; i++) {
-                bots.push({
-                    name: bNames[i % 5] + "_" + (i+1),
-                    x: Math.random()*WORLD_SIZE, y: Math.random()*WORLD_SIZE,
-                    color: `hsl(${Math.random()*360}, 70%, 50%)`,
-                    segments: [], length: 20 + Math.random()*30, angle: Math.random()*6, speed: 4, score: Math.floor(Math.random()*500)
-                });
-            }
-            for(let i=0; i<500; i++) spawnFood();
+function spawnFood() {
+    foods.push({x: Math.random()*world.w, y: Math.random()*world.h, c: `hsl(${Math.random()*360}, 80%, 50%)`, r: 4});
+}
+
+function spawnBot() {
+    bots.push({
+        x: Math.random()*world.w, y: Math.random()*world.h,
+        angle: Math.random()*Math.PI*2, segments: [], len: 20 + Math.random()*40,
+        c: `hsl(${Math.random()*360}, 70%, 50%)`, name: "Bot_" + Math.floor(Math.random()*100)
+    });
+}
+
+// Kontroller
+const stick = document.getElementById('joy-stick');
+window.addEventListener('touchmove', (e) => {
+    if(!gameActive) return;
+    const t = e.touches[0];
+    const dx = t.clientX - 90; const dy = t.clientY - (window.innerHeight - 90);
+    snake.angle = Math.atan2(dy, dx);
+    const dist = Math.min(Math.hypot(dx, dy), 30);
+    stick.style.transform = `translate(${Math.cos(snake.angle)*dist}px, ${Math.sin(snake.angle)*dist}px)`;
+});
+
+document.getElementById('boost-btn').addEventListener('touchstart', () => isBoosting = true);
+document.getElementById('boost-btn').addEventListener('touchend', () => isBoosting = false);
+
+function update() {
+    if(!gameActive) return;
+
+    let s = isBoosting && snake.len > 10 ? 8 : 4;
+    snake.x += Math.cos(snake.angle) * s;
+    snake.y += Math.sin(snake.angle) * s;
+
+    snake.segments.unshift({x: snake.x, y: snake.y});
+    if(snake.segments.length > snake.len) snake.segments.pop();
+
+    // Sınır ve Bot Çarpışma
+    if(snake.x < 0 || snake.x > world.w || snake.y < 0 || snake.y > world.h) endGame();
+    
+    // Yemek
+    foods.forEach((f, i) => {
+        if(Math.hypot(snake.x - f.x, snake.y - f.y) < 20) {
+            snake.len += 1; foods.splice(i, 1); spawnFood();
         }
+    });
 
-        function spawnFood() {
-            foods.push({ x: Math.random()*WORLD_SIZE, y: Math.random()*WORLD_SIZE, r: Math.random()*3+3, c: `hsl(${Math.random()*360}, 100%, 50%)` });
-        }
+    // Bot Hareketi
+    bots.forEach(b => {
+        b.x += Math.cos(b.angle)*3; b.y += Math.sin(b.angle)*3;
+        b.segments.unshift({x:b.x, y:b.y});
+        if(b.segments.length > b.len) b.segments.pop();
+        if(b.x < 0 || b.x > world.w || b.y < 0 || b.y > world.h) b.angle += Math.PI;
+    });
+}
 
-        // Joystick ve Boost
-        const joy = document.getElementById('joystick-wrapper');
-        const stick = document.getElementById('joystick-stick');
-        joy.addEventListener('touchmove', (e) => {
-            if(!gameRunning) return;
-            const t = e.touches[0]; const r = joy.getBoundingClientRect();
-            const dx = t.clientX - (r.left + r.width/2); const dy = t.clientY - (r.top + r.height/2);
-            snake.angle = Math.atan2(dy, dx);
-            const d = Math.min(Math.hypot(dx, dy), r.width/2);
-            stick.style.transform = `translate(${Math.cos(snake.angle)*d}px, ${Math.sin(snake.angle)*d}px)`;
+function draw() {
+    ctx.fillStyle = '#000'; ctx.fillRect(0,0,canvas.width, canvas.height);
+    
+    ctx.save();
+    ctx.translate(canvas.width/2 - snake.x, canvas.height/2 - snake.y);
+
+    // Yemek
+    foods.forEach(f => {
+        ctx.fillStyle = f.c; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI*2); ctx.fill();
+    });
+
+    // Botlar
+    bots.forEach(b => {
+        ctx.fillStyle = b.c;
+        b.segments.forEach(seg => {
+            ctx.beginPath(); ctx.arc(seg.x, seg.y, 12, 0, Math.PI*2); ctx.fill();
         });
-        document.getElementById('boost-btn').addEventListener('touchstart', (e) => { e.preventDefault(); isBoosting = true; });
-        document.getElementById('boost-btn').addEventListener('touchend', () => isBoosting = false);
+    });
 
-        // Admin Tetikleyici
-        let clickCount = 0;
-        window.handleSigClick = () => { if(++clickCount >= 3) { document.getElementById('adminPanel').style.display='block'; clickCount=0; }};
-        window.addPowerAdmin = () => { score += 500; snake.length += 10; };
-        window.closeAdmin = () => document.getElementById('adminPanel').style.display='none';
-
-        function update() {
-            if(!gameRunning) return;
-            let s = isBoosting && score > 20 ? 10 : 5;
-            if(isBoosting && score > 20) { score -= 0.1; snake.length -= 0.02; }
-
-            snake.x += Math.cos(snake.angle)*s; snake.y += Math.sin(snake.angle)*s;
-            camera.x = snake.x - canvas.width/2; camera.y = snake.y - canvas.height/2;
-
-            snake.segments.unshift({x: snake.x, y: snake.y});
-            if(snake.segments.length > snake.length*3) snake.segments.pop();
-
-            if(snake.x<0 || snake.x>WORLD_SIZE || snake.y<0 || snake.y>WORLD_SIZE) gameOver();
-
-            foods.forEach((f, i) => {
-                if(Math.hypot(snake.x-f.x, snake.y-f.y) < 25) { score += 10; snake.length += 0.4; foods.splice(i,1); spawnFood(); }
-            });
-
-            bots.forEach(b => {
-                b.x += Math.cos(b.angle)*b.speed; b.y += Math.sin(b.angle)*b.speed;
-                b.segments.unshift({x:b.x, y:b.y}); if(b.segments.length > b.length*3) b.segments.pop();
-                if(Math.random()<0.02) b.angle += (Math.random()-0.5);
-                if(b.x<0 || b.x>WORLD_SIZE || b.y<0 || b.y>WORLD_SIZE) b.angle += 0.5;
-                if(Math.hypot(snake.x - b.x, snake.y - b.y) < 18) gameOver();
-            });
-            updateUI();
+    // Oyuncu
+    ctx.fillStyle = '#A020F0';
+    snake.segments.forEach((seg, i) => {
+        ctx.beginPath(); ctx.arc(seg.x, seg.y, 14, 0, Math.PI*2); ctx.fill();
+        if(i === 0) { // Gözler
+            ctx.fillStyle = "white";
+            ctx.beginPath(); ctx.arc(seg.x+5, seg.y-5, 4, 0, Math.PI*2); ctx.fill();
         }
+    });
 
-        function draw() {
-            ctx.fillStyle = "#000"; ctx.fillRect(0,0,canvas.width,canvas.height);
-            ctx.save(); ctx.translate(-camera.x, -camera.y);
-            
-            // Grid
-            ctx.strokeStyle = "#111";
-            for(let i=0; i<WORLD_SIZE; i+=200) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,WORLD_SIZE); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(WORLD_SIZE,i); ctx.stroke(); }
-
-            foods.forEach(f => { ctx.fillStyle = f.c; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI*2); ctx.fill(); });
-
-            const drawYilan = (segs, color) => {
-                segs.forEach((s, i) => {
-                    ctx.fillStyle = color; ctx.beginPath(); ctx.arc(s.x, s.y, 14, 0, Math.PI*2); ctx.fill();
-                    if(i===0) { ctx.fillStyle="white"; ctx.beginPath(); ctx.arc(s.x+5, s.y-5, 4, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(s.x+5, s.y+5, 4, 0, Math.PI*2); ctx.fill(); }
-                });
-            };
-            bots.forEach(b => drawYilan(b.segments, b.color));
-            drawYilan(snake.segments, "#A020F0");
-            ctx.restore();
-            drawMinimap();
-        }
-
-        function drawMinimap() {
-            mCtx.clearRect(0,0,130,130);
-            mCtx.fillStyle = "red"; mCtx.beginPath(); mCtx.arc((snake.x/WORLD_SIZE)*130, (snake.y/WORLD_SIZE)*130, 4, 0, Math.PI*2); mCtx.fill();
-        }
-
-        function updateUI() {
-            document.getElementById('liveScore').innerText = Math.floor(score);
-            let l = [...bots, {name: playerName, score: Math.floor(score)}].sort((a,b)=>b.score-a.score).slice(0,5);
-            document.getElementById('leaderboardList').innerHTML = l.map(x => `<div class="leader-item ${x.name===playerName?'me':''}"><span>${x.name}</span><span>${x.score}</span></div>`).join('');
-        }
-
-        function gameOver() { gameRunning = false; document.getElementById('finalScoreDisplay').innerText = "Skor: " + Math.floor(score); document.getElementById('gameOverScreen').style.display = 'flex'; }
-        window.startGame = () => { playerName = document.getElementById('pName').value || "Efe"; document.getElementById('menu').style.display='none'; gameRunning = true; };
-
-        init();
-        (function loop() { update(); draw(); requestAnimationFrame(loop); })();
-    </script>
-</body>
-</html>
-    </style>
-</head>
-<body>
-
-    <div class="live-score-box">SKOR: <span id="liveScore">0</span></div>
+    ctx.restore();
     
-    <div id="ui-leaderboard">
-        <div style="text-align: center; color: #ffcc00; font-size: 12px; font-weight: bold; margin-bottom: 5px;">SIRALAMA</div>
-        <div id="leaderboardList"></div>
-    </div>
+    // UI Güncelleme
+    document.getElementById('score-board').innerText = "Skor: " + Math.floor(snake.len * 10);
+    drawMinimap();
+}
 
-    <div id="minimap-box">
-        <canvas id="minimap-canvas"></canvas>
-    </div>
+function drawMinimap() {
+    mCtx.clearRect(0,0,120,120);
+    mCtx.fillStyle = "red";
+    mCtx.fillRect((snake.x/world.w)*120, (snake.y/world.h)*120, 4, 4);
+}
 
-    <div id="menu" class="overlay">
-        <h1 style="color:#A020F0; font-size: 45px; text-shadow: 0 0 15px #A020F0; margin-bottom: 10px;">SNAKE.IO PRO</h1>
-        <input type="text" id="pName" placeholder="Adını Yaz..." maxlength="12">
-        <button onclick="startGame()">OYUNA BAŞLA</button>
-        <div class="footer" onclick="handleSigClick()">Purpleguy © 2026 - tablet power</div>
-    </div>
+function startGame() {
+    document.getElementById('menu').style.display = 'none';
+    gameActive = true;
+    init();
+}
 
-    <div id="gameOverScreen" class="overlay" style="display:none;">
-        <h1 style="color:red; font-size:60px; text-shadow: 0 0 20px red; margin: 0;">ÖLDÜN!</h1>
-        <h2 id="finalScoreDisplay" style="margin: 10px 0;">Skor: 0</h2>
-        <button onclick="location.reload()">TEKRAR DENE</button>
-        <div class="footer" style="margin-top:40px;">Purpleguy © 2026 - tablet power</div>
-    </div>
+function endGame() {
+    gameActive = false;
+    document.getElementById('final-score').innerText = "Skorun: " + Math.floor(snake.len * 10);
+    document.getElementById('death-screen').style.display = 'flex';
+}
 
-    <div id="adminPanel">
-        <h3 style="margin-top:0;">ADMİN PANELİ</h3>
-        <button onclick="addPowerAdmin()" style="background:white; color:black; margin-bottom:10px;">Purpleguy Power-Up</button><br>
-        <button onclick="closeAdmin()" style="background:#333;">Kapat</button>
-    </div>
-
-    <div id="joystick-wrapper"><div id="joystick-stick"></div></div>
-    <div id="boost-btn">BOOST</div>
-    <canvas id="gameCanvas"></canvas>
-
-    <script src="game.js"></script>
+function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+loop();
+</script>
 </body>
 </html>
-    <div id="menu" class="overlay">
-        <h1 style="color:#A020F0; font-size: 45px; text-shadow: 0 0 15px #A020F0;">Snake.io Pro</h1>
-        <input type="text" id="pName" placeholder="Adını Yaz..." maxlength="12" style="padding:12px; border-radius:20px; border:2px solid #A020F0; background:#000; color:#fff; text-align:center; width:220px; font-size:18px;">
-        
-        <div class="shop-container">
-            <h4 style="margin:0 0 10px 0; text-align:center;">Kostüm Marketi</h4>
-            <div id="shopItems"></div>
-        </div>
-
-        <button onclick="startGame()">OYUNA BAŞLA</button>
-        <div class="footer" onclick="handleSignatureClick()">Purpleguy © 2026 - tablet power</div>
-    </div>
-
-    <div id="adminPanel">
-        <h3>ADMİN PANELİ</h3>
-        <button onclick="addPowerUpAdmin()">Purpleguy Power-up At</button><br><br>
-        <button onclick="killAllBots()">Tüm Botları Patlat</button><br><br>
-        <button onclick="closeAdmin()" style="background:#333;">Paneli Kapat</button>
-    </div>
-
-    <div id="joystick-wrapper"><div id="joystick-stick"></div></div>
-    <div id="boost-btn">BOOST</div>
-
-    <canvas id="gameCanvas"></canvas>
-
-    <script src="game.js"></script>
-</body>
-</html>
-
